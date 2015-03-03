@@ -19,9 +19,9 @@ Download the source code package:
 
     wget https://github.com/d99kris/libstackusage/archive/master.zip
 
-Extract package:
+Extract package and go to extracted directory:
 
-    unzip master.zip
+    unzip master.zip && cd libstackusage-master
 
 Configure and build:
 
