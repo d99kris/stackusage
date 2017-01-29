@@ -1,7 +1,7 @@
 /*
  * sumain.c
  *
- * Copyright (c) 2015, Kristofer Berggren
+ * Copyright (c) 2015-2017, Kristofer Berggren
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,12 +34,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/resource.h>
 
 #define __USE_GNU
 #include <dlfcn.h>
 #include <pthread.h>
+#ifdef __linux__
+#include <sys/syscall.h>
+#endif
 
 
 /* ----------- Defines ------------------------------------------- */
@@ -51,7 +55,7 @@
 
 /* ----------- Macros -------------------------------------------- */
 #define SU_LOG(...)  do { if(su_log_stderr) fprintf(stderr, __VA_ARGS__); \
-                          if(su_log_syslog) syslog(LOG_INFO, __VA_ARGS__); \
+                          if(su_log_syslog) syslog(LOG_ERR, __VA_ARGS__); \
                         } while(0)
 #define SU_LOG_ERR   SU_LOG("%s (pid %d): %s:%d error\n", \
                             su_name, getpid(), __FUNCTION__, __LINE__)
@@ -78,15 +82,15 @@ typedef struct su_threadinfo_s
   int id;
   su_threadtype_t threadtype;
   pthread_t pthread;
+  pid_t tid;
   void *stack_addr;
   void *stack_end;
-  void *stack_base;
   size_t stack_req_size;
   size_t stack_size;
   size_t stack_max_usage;
   size_t guard_size;
-  struct timespec time_start;
-  struct timespec time_stop;
+  time_t time_start;
+  time_t time_stop;
   int time_duration;
   void *func_ptr;
   struct su_threadinfo_s *next;
@@ -99,6 +103,8 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
                            void *func_ptr);
 static void su_thread_fini(void *key);
 static void su_get_env(void);
+static int su_get_stack_growth(char *stack_addr);
+
 static void su_get_stack_usage(struct su_threadinfo_s *threadinfo);
 static void su_log_stack_usage(void);
 
@@ -114,6 +120,7 @@ static int su_log_stderr = 0;
 static int su_log_syslog = 0;
 static struct su_threadinfo_s *threadinfo_head = NULL;
 static pthread_mutex_t threadinfo_mx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_key_t key;
 
 
 /* ----------- Global Functions ---------------------------------- */
@@ -131,6 +138,9 @@ void __attribute__ ((constructor)) su_init(void)
       SU_LOG_ERR;
     }
 
+    /* Initialize thread key, to with callback at thread termination */
+    pthread_key_create(&key, su_thread_fini);
+ 
     /* Register main thread */
     su_thread_init(SU_THREAD_MAIN, NULL, NULL);
 
@@ -238,8 +248,10 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
                            void *func_ptr)
 {
   struct su_threadinfo_s *threadinfo = NULL;
+#ifndef __APPLE__
   pthread_attr_t attr;
-
+#endif
+  
   threadinfo = calloc(sizeof(struct su_threadinfo_s), 1);
   if(threadinfo == NULL)
   {
@@ -249,13 +261,11 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
 
   if(threadtype == SU_THREAD_CHILD)
   {
-    /* Set thread key, to register callback at thread termination */
-    pthread_key_t key;
+    /* Thread specific (dummy) data */
     pthread_key_t *key_value = calloc(sizeof(pthread_key_t), 1);
 
     if(key_value)
     {
-      pthread_key_create(&key, su_thread_fini);
       pthread_setspecific(key, key_value);
 
       /* Get requested stack size */
@@ -327,8 +337,17 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
   threadinfo->threadtype = threadtype;
   threadinfo->pthread = pthread_self();
   threadinfo->func_ptr = func_ptr;
-
+#ifdef __linux__
+  threadinfo->tid = syscall(SYS_gettid);
+#endif
+  
   /* Get current/actual stack attributes */
+#ifdef __APPLE__
+  threadinfo->stack_addr = pthread_get_stackaddr_np(threadinfo->pthread);
+  threadinfo->stack_size = pthread_get_stacksize_np(threadinfo->pthread);
+  threadinfo->stack_addr -= threadinfo->stack_size;
+  threadinfo->guard_size = 0;
+#else
   if(pthread_getattr_np(threadinfo->pthread, &attr) == 0)
   {
     size_t stack_size = 0;
@@ -358,39 +377,43 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
   {
     SU_LOG_WARN;
   }
+#endif
 
   /* Get current stack position (base), and fill unused stack with data */
   {
-    char *stack_ptr = NULL;
     char stack_var;
-    threadinfo->stack_base = &stack_var;
+    char *fill_ptr = NULL;
 
-    if(threadinfo->stack_base > threadinfo->stack_addr)
+    if(su_get_stack_growth(&stack_var) > 0)
     {
-      /* For glibc >=2.8 guard is included in stack size, adjust for that */
-      threadinfo->stack_addr += threadinfo->guard_size;
+      /* Stack growing upwards / increasing address */
+
+      /* Store end address */
       threadinfo->stack_end = (char *) threadinfo->stack_addr +
         threadinfo->stack_size;
-      /* Do not fill the first SU_FILL_OFFSET bytes, as they may be in use */
-      stack_ptr = (&stack_var) - SU_FILL_OFFSET;
-      while(stack_ptr > (char *) threadinfo->stack_addr)
+      /* Fill stack starting at offset, for stack that is in use */
+      fill_ptr = (&stack_var) + SU_FILL_OFFSET;
+      while(fill_ptr < (char *) threadinfo->stack_end)
       {
-        *stack_ptr = SU_FILL_BYTE;
-        stack_ptr--;
+        *fill_ptr = SU_FILL_BYTE;
+        fill_ptr++;
       }
     }
     else
     {
-      /* For glibc >=2.8 guard is included in stack size, adjust for that */
-      threadinfo->stack_addr -= threadinfo->guard_size;
-      threadinfo->stack_end = (char *) threadinfo->stack_addr -
+      /* Stack growing downwards / decreasing address */
+
+      /* Guard is included at base of stack, adjust for that */
+      threadinfo->stack_addr += threadinfo->guard_size;
+      /* Store end address */
+      threadinfo->stack_end = (char *) threadinfo->stack_addr +
         threadinfo->stack_size;
-      /* Do not fill the first SU_FILL_OFFSET bytes, as they may be in use */
-      stack_ptr = (&stack_var) + SU_FILL_OFFSET;
-      while(stack_ptr < (char *) threadinfo->stack_addr)
+      /* Fill stack starting at offset, for stack that is in use */
+      fill_ptr = (&stack_var) - SU_FILL_OFFSET;
+      while(fill_ptr > (char *) threadinfo->stack_addr)
       {
-        *stack_ptr = SU_FILL_BYTE;
-        stack_ptr++;
+        *fill_ptr = SU_FILL_BYTE;
+        fill_ptr--;
       }
     }
   }
@@ -399,7 +422,7 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
   su_get_stack_usage(threadinfo);
 
   /* Store start time */
-  if(clock_gettime(CLOCK_MONOTONIC, &(threadinfo->time_start)) != 0)
+  if(time(&(threadinfo->time_start)) == ((time_t)-1))
   {
     SU_LOG_WARN;
   }
@@ -431,8 +454,10 @@ static void su_log_stack_usage(void)
   struct su_threadinfo_s *threadinfo_it = NULL;
   pthread_mutex_lock(&threadinfo_mx);
   threadinfo_it = threadinfo_head;
-  SU_LOG("%s   pid tid  requested     actual    maxuse  max%%    dur  funcP\n",
+  SU_LOG("%s log start -------------------------------------------------\n",
          su_name);
+  SU_LOG("  pid  id    tid  requested     actual     maxuse  max%%    dur"
+         "  funcP\n");
   while(threadinfo_it)
   {
     int usage_percent = 0;
@@ -443,8 +468,10 @@ static void su_log_stack_usage(void)
         (int) threadinfo_it->stack_req_size;
     }
 
-    SU_LOG("%s %5d %3d  %9d  %9d %9d   %3d  %5d  %p\n", su_name, getpid(),
-           threadinfo_it->id,
+    SU_LOG("%5d %3d  %5d  %9d  %9d  %9d   %3d  %5d  %p\n",
+           getpid(),
+           threadinfo_it->id, 
+           threadinfo_it->tid,
            (int) threadinfo_it->stack_req_size,
            (int) threadinfo_it->stack_size,
            (int) threadinfo_it->stack_max_usage,
@@ -455,29 +482,40 @@ static void su_log_stack_usage(void)
 
     threadinfo_it = threadinfo_it->next;
   }
+  SU_LOG("%s log end ---------------------------------------------------\n",
+         su_name);
   pthread_mutex_unlock(&threadinfo_mx);
+}
+
+
+static int __attribute__ ((noinline)) su_get_stack_growth(char *stack_addr)
+{
+  char new_stack_var;
+  return (int)((&new_stack_var) - stack_addr);
 }
 
 
 static void su_get_stack_usage(struct su_threadinfo_s *threadinfo)
 {
-  if(threadinfo->stack_end > threadinfo->stack_addr)
+  char stack_var;
+  char *read_ptr = NULL;
+  if(su_get_stack_growth(&stack_var) > 0)
   {
-    char *stackP = (char *)(threadinfo->stack_addr) + 1;
-    while((*stackP & 0xff) == SU_FILL_BYTE)
+    read_ptr = (char *)(threadinfo->stack_end) - 1;
+    while((*read_ptr & 0xff) == SU_FILL_BYTE)
     {
-      stackP++;
+      read_ptr--;
     }
-    threadinfo->stack_max_usage = (char *)threadinfo->stack_end - stackP;
+    threadinfo->stack_max_usage = read_ptr - (char *)threadinfo->stack_addr;
   }
   else
   {
-    char *stackP = (char *)(threadinfo->stack_addr) - 1;
-    while((*stackP & 0xff) == SU_FILL_BYTE)
+    read_ptr = (char *)(threadinfo->stack_addr) + 1;
+    while((*read_ptr & 0xff) == SU_FILL_BYTE)
     {
-      stackP--;
+      read_ptr++;
     }
-    threadinfo->stack_max_usage = (char *)threadinfo->stack_end - stackP;
+    threadinfo->stack_max_usage = (char *)threadinfo->stack_end - read_ptr;
   }
 }
 
@@ -516,10 +554,10 @@ static void su_thread_fini(void *key)
   su_get_stack_usage(threadinfo);
 
   /* Store stop time and calculate duration */
-  if(clock_gettime(CLOCK_MONOTONIC, &(threadinfo->time_stop)) == 0)
+  if(time(&(threadinfo->time_stop)) != ((time_t)-1))
   {
-    threadinfo->time_duration = threadinfo->time_stop.tv_sec -
-      threadinfo->time_start.tv_sec;
+    threadinfo->time_duration = threadinfo->time_stop -
+      threadinfo->time_start;
   }
   else
   {

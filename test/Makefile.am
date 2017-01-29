@@ -1,10 +1,10 @@
-bin_PROGRAMS                 = suctest sucpptest
+bin_PROGRAMS                 = sutest01 sutest02
 
-suctest_SOURCES              = suctest.c
-suctest_LDFLAGS              = -lpthread
-suctest_CFLAGS               = -Wall -O0
+sutest01_SOURCES             = sutest01.c
+sutest01_LDFLAGS             = -lpthread
+sutest01_CFLAGS              = -Wall -O0
 
-sucpptest_SOURCES            = sucpptest.cc
-sucpptest_LDFLAGS            = -lpthread
-sucpptest_CXXFLAGS           = -Wall -O0 -std=c++11
+sutest02_SOURCES             = sutest02.c
+sutest02_LDFLAGS             = -lpthread
+sutest02_CFLAGS              = -Wall -O0
 

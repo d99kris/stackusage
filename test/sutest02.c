@@ -1,7 +1,7 @@
 /*
- * suctest.c
+ * sutest02.c
  *
- * Copyright (c) 2015, Kristofer Berggren
+ * Copyright (c) 2017, Kristofer Berggren
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,62 +38,46 @@
 
 
 /* ----------- Defines ------------------------------------------- */
-#define STACK_PER_CALL  1000
+#define NUM_THREADS  (PTHREAD_KEYS_MAX + 1)
 
 
 /* ----------- Local Function Prototypes ------------------------- */
-static pthread_t spawn_thread(int stack_size, int *stack_usage,
-                              pthread_attr_t *attr);
+static pthread_t spawn_thread(void);
 static void *thread_start(void *arg);
-
-
-/* ----------- File Global Variables ----------------------------- */
-static int stack_usage_main = 30000;
-static int stack_usage_t1 = 1000;
-static int stack_usage_t2 = 5000;
-static int stack_usage_t3 = 20000;
-static int stack_usage_t4 = 7000;
 
 
 /* ----------- Global Functions ---------------------------------- */
 int main(int argc, char *argv[], char *envp[])
 {
-  pthread_t t1, t2, t3, t4;
-  pthread_attr_t attr1, attr2, attr3, attr4;
+  pthread_t tid[NUM_THREADS];
+  int i = 0;
 
-  /* Spawn threads with some arbitrary stack sizes and usages */
-  t1 = spawn_thread(PTHREAD_STACK_MIN, &stack_usage_t1, &attr1);
-  usleep(10000);
-  t2 = spawn_thread(PTHREAD_STACK_MIN, &stack_usage_t2, &attr2);
-  usleep(10000);
-  t3 = spawn_thread(PTHREAD_STACK_MIN*2, &stack_usage_t3, &attr3);
-  usleep(10000);
-  t4 = spawn_thread(PTHREAD_STACK_MIN, &stack_usage_t4, &attr4);
-  usleep(10000);
-
-  /* Use stack in main-thread */
-  thread_start(&stack_usage_main);
+  /* Spawn threads */
+  for(i = 0; i < NUM_THREADS; i++)
+  {
+    tid[i] = spawn_thread();
+  }
 
   /* Wait for threads to complete */
-  pthread_join(t1, NULL);
-  pthread_join(t2, NULL);
-  pthread_join(t3, NULL);
-  pthread_join(t4, NULL);
-
+  for(i = 0; i < NUM_THREADS; i++)
+  {
+    pthread_join(tid[i], NULL);
+  }
+  
   return 0;
 }
 
 
 /* ----------- Local Functions ----------------------------------- */
-static pthread_t spawn_thread(int stack_size, int *stack_usage,
-                              pthread_attr_t *attr)
+static pthread_t spawn_thread(void)
 {
   pthread_t tid;
+  pthread_attr_t attr;
 
-  pthread_attr_init(attr);
-  pthread_attr_setstacksize(attr, stack_size);
-  pthread_create(&tid, attr, &thread_start, stack_usage);
-  pthread_attr_destroy(attr);
+  pthread_attr_init(&attr);
+  pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+  pthread_create(&tid, &attr, &thread_start, NULL);
+  pthread_attr_destroy(&attr);
 
   return tid;
 }
@@ -101,28 +85,8 @@ static pthread_t spawn_thread(int stack_size, int *stack_usage,
 
 static void *thread_start(void *arg)
 {
-  int *stack_usage = (int *)arg;
-  {
-    /* Using GCC extension allowing dynamic stack allocation */
-    char dummy_data[*stack_usage];
-
-    /* Populate stack with dummy data */
-    int i = 0;
-    for(i = 0; i < *stack_usage; i++)
-    {
-      dummy_data[i] = rand() & 0xff;
-      if((dummy_data[i] > 0x7f) && (i > 0))
-      {
-        dummy_data[i] = dummy_data[i - 1];
-      }
-    }
-  }
-
-  /* Exercise both explicit and implicit thread termination */
-  if(rand() % 2)
-  {
-    pthread_exit(NULL);
-  }
+  /* Sleep 1 ms */
+  usleep(1000);
 
   return NULL;
 }
