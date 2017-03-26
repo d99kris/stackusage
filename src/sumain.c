@@ -37,11 +37,7 @@
 /* ----------- Macros -------------------------------------------- */
 #define SU_LOG(...)  do { if(su_log_file) {                                   \
                             FILE *f = fopen(su_log_file, "a");                \
-                            if (f) {                                          \
-                              fprintf(f, __VA_ARGS__);                        \
-                              fclose(f);                                      \
-                            }                                                 \
-                          }                                                   \
+                            if (f) { fprintf(f, __VA_ARGS__); fclose(f); }  } \
                           if(su_log_stderr) { fprintf(stderr, __VA_ARGS__); } \
                           if(su_log_syslog) { syslog(LOG_ERR, __VA_ARGS__); } \
                         } while(0)
@@ -98,7 +94,7 @@ static void su_log_stack_usage(void);
 
 
 /* ----------- File Global Variables ----------------------------- */
-static const char *su_name = "libstackusage";
+static const char *su_name = "stackusage";
 static int (*real_pthread_create) (pthread_t *thread,
                                    const pthread_attr_t *attr,
                                    void *(*start_routine) (void *),
@@ -443,7 +439,7 @@ static void su_log_stack_usage(void)
   struct su_threadinfo_s *threadinfo_it = NULL;
   pthread_mutex_lock(&threadinfo_mx);
   threadinfo_it = threadinfo_head;
-  SU_LOG("%s log start -------------------------------------------------\n",
+  SU_LOG("%s log start ----------------------------------------------------\n",
          su_name);
   SU_LOG("  pid  id    tid  requested     actual     maxuse  max%%    dur"
          "  funcP\n");
@@ -471,7 +467,7 @@ static void su_log_stack_usage(void)
 
     threadinfo_it = threadinfo_it->next;
   }
-  SU_LOG("%s log end ---------------------------------------------------\n",
+  SU_LOG("%s log end ------------------------------------------------------\n",
          su_name);
   pthread_mutex_unlock(&threadinfo_mx);
 }
