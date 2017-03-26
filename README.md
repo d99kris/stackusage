@@ -1,16 +1,16 @@
-libstackusage
-=============
-libstackusage is a small library which allows a user to determine the
-stack usage of a Linux application (main thread and native pthread child
+Stackusage
+==========
+Stackusage is a tool which allows a user to determine the stack usage of a
+Linux / macOS / OS X application (main thread and native pthread child
 threads). A primary use case may be to determine stack utilization for child
 threads, and adjust the stack size allocation to provide desired margin. This
 is particularly useful for applications and libraries designed to work in
-resource-constrained environments, such as embedded Linux systems.
+resource-constrained environments, such as embedded systems.
 
 Supported Platforms
 ===================
-libstackusage is primarily developed and tested on Linux, but basic
-functionality should work in OS X as well. Current version has been tested on:
+Stackusage is primarily developed and tested on Linux, but basic
+functionality should work in macOS / OS X as well. Current version has been tested on:
 - OS X El Capitan 10.11
 - Ubuntu 16.04 LTS
 
@@ -18,7 +18,7 @@ Installation
 ============
 Download the source code:
 
-    git clone https://github.com/d99kris/libstackusage && cd libstackusage
+    git clone https://github.com/d99kris/stackusage && cd stackusage
 
 Configure and build:
 
@@ -30,6 +30,27 @@ Optionally install in system:
 
 Usage
 =====
+
+Linux / macOS
+-------------
+
+General usage syntax:
+
+    stackusage <application> [application arguments]
+
+Example checking stack usage of 'ls' with stackusage installed on system:
+
+    stackusage ls
+
+Example checking stack usage of 'whoami' without stackusage being installed on system:
+
+    ./src/stackusage whoami
+
+Advanced Usage (Library)
+========================
+
+For more detailed controlled of stack usage logging, one may manually load and setup the
+underlying libstackusage library per this section.
 
 Linux
 -----
@@ -69,8 +90,8 @@ Output
 ======
 Example output:
 
-    $ SU_STDERR=1 LD_PRELOAD="./src/.libs/libstackusage.so" ./test/sutest01
-    libstackusage log start -------------------------------------------------
+    $ ./src/stackusage ./test/sutest01
+    stackusage log start ----------------------------------------------------
       pid  id    tid  requested     actual     maxuse  max%    dur  funcP
     23930   0  23930    8388608    8384512       4144     0      0  (nil)
     23930   1  23931      16384      16384       9336    56      0  0x4009b0
@@ -78,7 +99,7 @@ Example output:
     23930   3  23933      24576      24576      16728    68      0  0x4009b0
     23930   4  23934      32768      32768      24920    76      0  0x4009b0
     23930   5  23935      49152      49152      41304    84      0  0x4009b0
-    libstackusage log end ---------------------------------------------------
+    stackusage log end ------------------------------------------------------
 
 Description of columns:
 
@@ -96,27 +117,20 @@ The function that funcP points to can be determined for example using addr2line:
 
     $ addr2line -f -e ./test/sutest01 0x4009b0
     thread_start
-    ./test/sutest01.c:101
+    ./test/sutest01.c:81
 
 Design Notes
 ============
-libstackusage intercepts calls to pthread_create and fills the thread
+Stackusage intercepts calls to pthread_create and fills the thread
 stack with a dummy data pattern. It also registers a callback routine to be
 called upon thread termination. For main thread stack it utilizes
 constructor and destructor routines.
 
-Limitations
-===========
-Logging to stderr upon process termination may not work for all applications.
-Certain applications, like coreutils ls, etc, are closing stdout/stderr before
-library destructor is called. For such applications it is recommended to
-use syslog logging.
-
 License
 =======
-libstackusage is distributed under BSD 3-Clause license. See LICENSE file.
+Stackusage is distributed under the BSD 3-Clause license. See LICENSE file.
 
 Keywords
 ========
-linux, os x, pthreads, stack usage, stack utilization, threads.
+linux, macos, os x, pthreads, stack usage, stack utilization, threads.
 
