@@ -1,30 +1,10 @@
 /*
  * sumain.c
  *
- * Copyright (c) 2015-2017, Kristofer Berggren
+ * Copyright (C) 2015-2017 Kristofer Berggren
  * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the author nor the names of its contributors may
- *       be used to endorse or promote products derived from this software
- *       without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * stackusage is distributed under the BSD 3-Clause license, see LICENSE for details.
  *
  */
 
@@ -47,6 +27,7 @@
 
 
 /* ----------- Defines ------------------------------------------- */
+#define SU_ENV_FILE     "SU_FILE"
 #define SU_ENV_STDERR   "SU_STDERR"
 #define SU_ENV_SYSLOG   "SU_SYSLOG"
 #define SU_FILL_BYTE    0xcd
@@ -54,8 +35,15 @@
 
 
 /* ----------- Macros -------------------------------------------- */
-#define SU_LOG(...)  do { if(su_log_stderr) fprintf(stderr, __VA_ARGS__); \
-                          if(su_log_syslog) syslog(LOG_ERR, __VA_ARGS__); \
+#define SU_LOG(...)  do { if(su_log_file) {                                   \
+                            FILE *f = fopen(su_log_file, "a");                \
+                            if (f) {                                          \
+                              fprintf(f, __VA_ARGS__);                        \
+                              fclose(f);                                      \
+                            }                                                 \
+                          }                                                   \
+                          if(su_log_stderr) { fprintf(stderr, __VA_ARGS__); } \
+                          if(su_log_syslog) { syslog(LOG_ERR, __VA_ARGS__); } \
                         } while(0)
 #define SU_LOG_ERR   SU_LOG("%s (pid %d): %s:%d error\n", \
                             su_name, getpid(), __FUNCTION__, __LINE__)
@@ -118,6 +106,7 @@ static int (*real_pthread_create) (pthread_t *thread,
 static int su_inited = 0;
 static int su_log_stderr = 0;
 static int su_log_syslog = 0;
+static char *su_log_file = NULL;
 static struct su_threadinfo_s *threadinfo_head = NULL;
 static pthread_mutex_t threadinfo_mx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t key;
@@ -586,5 +575,7 @@ static void su_get_env(void)
   {
     su_log_syslog = 1;
   }
+
+  su_log_file = getenv(SU_ENV_FILE);
 }
 

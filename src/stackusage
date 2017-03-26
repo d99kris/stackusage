@@ -1,0 +1,146 @@
+#!/bin/bash
+
+# Copyright (C) 2015-2017 Kristofer Berggren
+# All rights reserved.
+#
+# stackusage is distributed under the BSD 3-Clause license, see LICENSE for details.
+
+showusage()
+{
+  echo "stackusage runs an application and measures the stack usage of its"
+  echo "main thread and child threads. By helping determine stack"
+  echo "utilization, it enables adjusting stack sizes with desired margin."
+  echo "The tool is particularly useful for applications and libraries "
+  echo "designed to work in resource-constrained environments, such as "
+  echo "embedded systems."
+  echo ""
+  echo "Usage: stackusage PROG [ARGS..]"
+  echo "   or: stackusage --help"
+  echo "   or: stackusage --version"
+  echo ""
+  echo "Options:"
+  echo "   PROG            program to run and analyze"
+  echo "   [ARGS..]        optional arguments to the program"
+  echo "   --help          display this help and exit"
+  echo "   --version       output version information and exit"
+  echo ""
+  echo "Examples:"
+  echo "stackusage ls"
+  echo ""
+  echo "executes the program 'ls' and measures its stack usage."
+  echo "Result is output to stderr on the following format:"
+  echo ""
+  echo "libstackusage log start -----------------------------------------------"
+  echo "pid  id    tid  requested     actual     maxuse    max%     dur  funcP "
+  echo "108    0  11108    8388608    8388608      14808       0       0 (nil) "
+  echo "libstackusage log end -------------------------------------------------"
+  echo ""
+  echo "Report bugs at https://github.com/d99kris/stackusage"
+  echo ""
+}
+
+showversion()
+{
+  echo "stackusage v1.0"
+  echo ""
+  echo "Copyright (C) 2015-2017 Kristofer Berggren"
+  echo ""
+  echo "stackusage is distributed under the BSD 3-Clause license."
+  echo ""
+  echo "Written by Kristofer Berggren"
+}
+
+if [ "${1}" == "--help" ] ; then
+  showusage
+  exit 0
+elif [ "${1}" == "--version" ] ; then
+  showversion
+  exit 0
+elif [ "${#}" == "0" ] ; then
+  showusage
+  exit 1
+else
+  PROG="${@:1}"
+fi
+
+# Determine self location
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+# Start program with libstackusage
+if [ "$(uname)" == "Darwin" ]; then
+  # Mac OS X
+  LIBNAME="libstackusage.1.dylib"
+
+  # Supported library paths
+  LIBPATHS=(
+    "${DIR}/../lib/${LIBNAME}"
+    "${DIR}/.libs/${LIBNAME}"
+    "${DIR}/${LIBNAME}"
+  )
+
+  # Iterate through library paths
+  CNT=0
+  while [ "${LIBPATHS[CNT]}" != "" ]; do
+    LIBPATH="${LIBPATHS[CNT]}"
+    if [ -e "${LIBPATH}" ]; then
+      # Create temporary output dir and set up log file path
+      TMP=$(mktemp -d)
+      TMPLOG="${TMP}/su.log"
+      # Run program
+      SU_FILE="${TMPLOG}"  DYLD_INSERT_LIBRARIES="${LIBPATH}" DYLD_FORCE_FLAT_NAMESPACE=1 "${@:1}" && \
+      cat "${TMPLOG}" >&2 && \
+      rm -rf "${TMP}" 2> /dev/null
+      exit ${?}
+    fi
+    CNT=$((${CNT} + 1))
+  done
+  
+  # Report error if library not found
+  echo "error: unable to determine path of ${LIBNAME}"
+  exit 1
+
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+  # GNU/Linux
+  LIBNAME="libstackusage.so"
+
+  # Supported library paths
+  LIBPATHS=(
+    "${DIR}/../lib/${LIBNAME}"
+    "${DIR}/.libs/${LIBNAME}"
+    "${DIR}/${LIBNAME}"
+  )
+
+  # Iterate through library paths
+  CNT=0
+  while [ "${LIBPATHS[CNT]}" != "" ]; do
+    LIBPATH="${LIBPATHS[CNT]}"
+    if [ -e "${LIBPATH}" ]; then
+      # Create temporary output dir and set up log file path
+      TMP=$(mktemp -d)
+      TMPLOG="${TMP}/su.log"
+      # Run program
+      SU_FILE="${TMPLOG}" LD_PRELOAD="${LIBPATH}" "${@:1}" && \
+      cat "${TMPLOG}" >&2 && \
+      rm -rf "${TMP}" 2> /dev/null
+      exit ${?}
+    fi
+    CNT=$((${CNT} + 1))
+  done
+  
+  # Report error if library not found
+  echo "error: unable to determine path of ${LIBNAME}"
+  exit 1
+
+else
+  # Unsupported OS
+  echo "Unsupported OS"
+fi
+
+exit 1
+
