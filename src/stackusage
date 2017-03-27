@@ -93,10 +93,15 @@ if [ "$(uname)" == "Darwin" ]; then
       TMP=$(mktemp -d)
       TMPLOG="${TMP}/su.log"
       # Run program
-      SU_FILE="${TMPLOG}"  DYLD_INSERT_LIBRARIES="${LIBPATH}" DYLD_FORCE_FLAT_NAMESPACE=1 "${@:1}" && \
-      cat "${TMPLOG}" >&2 && \
+      SU_FILE="${TMPLOG}"  DYLD_INSERT_LIBRARIES="${LIBPATH}" DYLD_FORCE_FLAT_NAMESPACE=1 "${@:1}"
+      RV=${?}
+      if [ -f "${TMPLOG}" ]; then
+        cat "${TMPLOG}" >&2
+      else
+        echo "error: unable to preload libstackusage"
+      fi
       rm -rf "${TMP}" 2> /dev/null
-      exit ${?}
+      exit ${RV}
     fi
     CNT=$((${CNT} + 1))
   done
@@ -125,10 +130,15 @@ elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
       TMP=$(mktemp -d)
       TMPLOG="${TMP}/su.log"
       # Run program
-      SU_FILE="${TMPLOG}" LD_PRELOAD="${LIBPATH}" "${@:1}" && \
-      cat "${TMPLOG}" >&2 && \
+      SU_FILE="${TMPLOG}" LD_PRELOAD="${LIBPATH}" "${@:1}"
+      RV=${?}
+      if [ -f "${TMPLOG}" ]; then
+        cat "${TMPLOG}" >&2
+      else
+        echo "error: unable to preload libstackusage"
+      fi
       rm -rf "${TMP}" 2> /dev/null
-      exit ${?}
+      exit ${RV}
     fi
     CNT=$((${CNT} + 1))
   done
