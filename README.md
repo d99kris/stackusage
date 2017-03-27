@@ -1,8 +1,8 @@
 Stackusage
 ==========
 Stackusage is a tool which allows a user to determine the stack usage of a
-Linux / macOS / OS X application (main thread and native pthread child
-threads). A primary use case may be to determine stack utilization for child
+Linux application (main thread and native pthread child threads).
+A primary use case may be to determine stack utilization for child
 threads, and adjust the stack size allocation to provide desired margin. This
 is particularly useful for applications and libraries designed to work in
 resource-constrained environments, such as embedded systems.
@@ -13,6 +13,10 @@ Stackusage is primarily developed and tested on Linux, but basic
 functionality should work in macOS / OS X as well. Current version has been tested on:
 - OS X El Capitan 10.11
 - Ubuntu 16.04 LTS
+
+Limitation: On macOS / OS X this tool relies on code injection using DYLD_INSERT_LIBRARIES,
+which generally does not work with third-party applications in a standard system. Using it on
+(your own) applications built from source should work fine though.
 
 Installation
 ============
@@ -31,33 +35,30 @@ Optionally install in system:
 Usage
 =====
 
-Linux / macOS
--------------
-
 General usage syntax:
 
     stackusage <application> [application arguments]
 
-Example checking stack usage of 'ls' with stackusage installed on system:
+Example checking stack usage of test program 'sutest01' with stackusage installed on system:
 
-    stackusage ls
+    stackusage ./test/sutest01
 
-Example checking stack usage of 'whoami' without stackusage being installed on system:
+Example checking stack usage of test program 'sutest02' without stackusage being installed on system:
 
-    ./src/stackusage whoami
+    ./src/stackusage ./test/sutest02
 
 Advanced Usage (Library)
 ========================
 
-For more detailed controlled of stack usage logging, one may manually load and setup the
-underlying libstackusage library per this section.
+For more detailed controls of stack usage logging, one may manually load and setup the
+underlying libstackusage library as described in this section.
 
 Linux
 -----
 
 General usage syntax:
 
-    [SU_STDERR=1] [SU_SYSLOG=1] LD_PRELOAD="/path/to/libstackusage.so" <application>
+    [SU_FILE=path] [SU_STDERR=1] [SU_SYSLOG=1] LD_PRELOAD="/path/to/libstackusage.so" <application>
 
 Example using libstackusage (without system install) with gedit and logging
 output to stderr:
@@ -70,16 +71,16 @@ output to syslog:
     SU_SYSLOG=1 LD_PRELOAD="/usr/lib/libstackusage.so" ls
 
 Example using libstackusage (without system install) with sutest01 application
-logging output to stderr and syslog:
+logging output to stderr and a named file /tmp/log.txt:
 
-    SU_STDERR=1 SU_SYSLOG=1 LD_PRELOAD="./src/.libs/libstackusage.so" ./test/sutest01
+    SU_STDERR=1 SU_PATH="/tmp/log.txt" LD_PRELOAD="./src/.libs/libstackusage.so" ./test/sutest01
 
-OS X
-----
+macOS / OS X
+------------
 
 General usage syntax:
 
-    [SU_STDERR=1] [SU_SYSLOG=1] DYLD_INSERT_LIBRARIES="/path/to/libstackusage.1.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 <application>
+    [SU_FILE=path] [SU_STDERR=1] [SU_SYSLOG=1] DYLD_INSERT_LIBRARIES="/path/to/libstackusage.1.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 <application>
 
 Example using libstackusage (without system install) with sutest01 application
 logging output to stderr and syslog:
@@ -119,8 +120,8 @@ The function that funcP points to can be determined for example using addr2line:
     thread_start
     ./test/sutest01.c:81
 
-Design Notes
-============
+Technical Details
+=================
 Stackusage intercepts calls to pthread_create and fills the thread
 stack with a dummy data pattern. It also registers a callback routine to be
 called upon thread termination. For main thread stack it utilizes
