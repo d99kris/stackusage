@@ -2,7 +2,12 @@ lib_LTLIBRARIES              = libstackusage.la
 libstackusage_la_SOURCES     = sumain.c
 libstackusage_la_LDFLAGS     = -shared -fPIC -ldl -lpthread                  \
                                $(EXTRA_LDFLAGS) -version-info 1:0:0
-libstackusage_la_CFLAGS      = -Wall
+libstackusage_la_CFLAGS      = -Wall -Wextra -Wpedantic -std=c99             \
+                               -Wshadow -Wpointer-arith -Wcast-qual          \
+                               -Wstrict-prototypes -Wmissing-prototypes      \
+                               -Wno-missing-braces -Wswitch-default          \
+                               -Wcast-align -Wunreachable-code -Wundef       \
+                               -Wuninitialized
 
 dist_bin_SCRIPTS             = stackusage
 
