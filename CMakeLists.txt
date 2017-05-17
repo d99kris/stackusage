@@ -19,6 +19,8 @@ install(PROGRAMS src/stackusage DESTINATION bin)
 install(FILES src/stackusage.1 DESTINATION share/man/man1)
 
 # Tests
-#add_executable(sutest01 tests/sutest01.c)
-#add_executable(sutest02 tests/sutest02.c)
+add_executable(sutest01 tests/sutest01.c)
+target_link_libraries(sutest01 pthread)
+add_executable(sutest02 tests/sutest02.c)
+target_link_libraries(sutest02 pthread)
 

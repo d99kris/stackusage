@@ -18,6 +18,15 @@
 
 
 /* ----------- Defines ------------------------------------------- */
+/* Temporary pthread limits, to be removed */
+#ifndef PTHREAD_KEYS_MAX
+#define PTHREAD_KEYS_MAX 128
+#endif
+
+#ifndef PTHREAD_STACK_MIN
+#define PTHREAD_STACK_MIN 16384
+#endif
+
 #define NUM_THREADS  (PTHREAD_KEYS_MAX + 1)
 
 
