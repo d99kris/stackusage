@@ -41,11 +41,11 @@ General usage syntax:
 
 Example checking stack usage of test program 'sutest01' with stackusage installed on system:
 
-    stackusage ./test/sutest01
+    stackusage ./build/sutest01
 
 Example checking stack usage of test program 'sutest02' without stackusage being installed on system:
 
-    ./src/stackusage ./test/sutest02
+    ./build/stackusage ./build/sutest02
 
 Advanced Usage (Library)
 ========================
@@ -63,35 +63,35 @@ General usage syntax:
 Example using libstackusage (without system install) with gedit and logging
 output to stderr:
 
-    SU_STDERR=1 LD_PRELOAD="./src/.libs/libstackusage.so" gedit
+    SU_STDERR=1 LD_PRELOAD="./build/libstackusage.so" gedit
 
 Example using libstackusage (system installed) with ls and logging
 output to syslog:
 
-    SU_SYSLOG=1 LD_PRELOAD="/usr/lib/libstackusage.so" ls
+    SU_SYSLOG=1 LD_PRELOAD="/usr/local/lib/libstackusage.so" ls
 
 Example using libstackusage (without system install) with sutest01 application
 logging output to stderr and a named file /tmp/log.txt:
 
-    SU_STDERR=1 SU_PATH="/tmp/log.txt" LD_PRELOAD="./src/.libs/libstackusage.so" ./test/sutest01
+    SU_STDERR=1 SU_FILE="/tmp/log.txt" LD_PRELOAD="./build/libstackusage.so" ./build/sutest01
 
 macOS / OS X
 ------------
 
 General usage syntax:
 
-    [SU_FILE=path] [SU_STDERR=1] [SU_SYSLOG=1] DYLD_INSERT_LIBRARIES="/path/to/libstackusage.1.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 <application>
+    [SU_FILE=path] [SU_STDERR=1] [SU_SYSLOG=1] DYLD_INSERT_LIBRARIES="/path/to/libstackusage.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 <application>
 
 Example using libstackusage (without system install) with sutest01 application
 logging output to stderr and syslog:
 
-    SU_STDERR=1 SU_SYSLOG=1 DYLD_INSERT_LIBRARIES="./src/.libs/libstackusage.1.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 ./test/sutest01
+    SU_STDERR=1 SU_SYSLOG=1 DYLD_INSERT_LIBRARIES="./build/libstackusage.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 ./build/sutest01
 
 Output
 ======
 Example output:
 
-    $ ./src/stackusage ./test/sutest01
+    $ ./build/stackusage ./build/sutest01
     stackusage log start ----------------------------------------------------
       pid  id    tid  requested     actual     maxuse  max%    dur  funcP
     23930   0  23930    8388608    8384512       4144     0      0  (nil)
@@ -116,9 +116,9 @@ Description of columns:
 
 The function that funcP points to can be determined for example using addr2line:
 
-    $ addr2line -f -e ./test/sutest01 0x4009b0
+    $ addr2line -f -e ./build/sutest01 0x4009b0
     thread_start
-    ./test/sutest01.c:81
+    ./tests/sutest01.c:81
 
 Technical Details
 =================
