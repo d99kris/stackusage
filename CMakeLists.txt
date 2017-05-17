@@ -9,7 +9,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -Wextra -Wshadow -Wpointer-ar
 add_library(stackusage SHARED src/sumain.c)
 install(TARGETS stackusage LIBRARY DESTINATION lib)
 set_target_properties(stackusage PROPERTIES LINK_FLAGS "-fPIC")
-target_link_libraries(heapusage pthread dl)
+target_link_libraries(stackusage pthread dl)
 
 # Utility
 install(PROGRAMS src/stackusage DESTINATION bin)
