@@ -12,12 +12,13 @@ set_target_properties(stackusage PROPERTIES LINK_FLAGS "-fPIC")
 target_link_libraries(stackusage pthread dl)
 
 # Utility
+configure_file(src/stackusage ${CMAKE_CURRENT_BINARY_DIR}/stackusage COPYONLY)
 install(PROGRAMS src/stackusage DESTINATION bin)
 
 # Manual
 install(FILES src/stackusage.1 DESTINATION share/man/man1)
 
 # Tests
-add_executable(sutest01 tests/sutest01.c)
-add_executable(sutest02 tests/sutest02.c)
+#add_executable(sutest01 tests/sutest01.c)
+#add_executable(sutest02 tests/sutest02.c)
 
