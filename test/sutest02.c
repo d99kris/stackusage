@@ -27,7 +27,7 @@ static void *thread_start(void *arg);
 
 
 /* ----------- Global Functions ---------------------------------- */
-int main(int argc, char *argv[], char *envp[])
+int main()
 {
   pthread_t tid[NUM_THREADS];
   int i = 0;
@@ -68,6 +68,6 @@ static void *thread_start(void *arg)
   /* Sleep 1 ms */
   usleep(1000);
 
-  return NULL;
+  return arg;
 }
 

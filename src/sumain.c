@@ -67,8 +67,8 @@ typedef struct su_threadinfo_s
   su_threadtype_t threadtype;
   pthread_t pthread;
   pid_t tid;
-  void *stack_addr;
-  void *stack_end;
+  char *stack_addr;
+  char *stack_end;
   size_t stack_req_size;
   size_t stack_size;
   size_t stack_max_usage;
@@ -79,6 +79,11 @@ typedef struct su_threadinfo_s
   void *func_ptr;
   struct su_threadinfo_s *next;
 } su_threadinfo_t;
+
+
+/* ----------- Global Function Prototypes ------------------------ */
+void __attribute__ ((constructor)) su_init(void);
+void __attribute__ ((destructor)) su_fini(void);
 
 
 /* ----------- Local Function Prototypes ------------------------- */
@@ -105,7 +110,7 @@ static int su_log_syslog = 0;
 static char *su_log_file = NULL;
 static struct su_threadinfo_s *threadinfo_head = NULL;
 static pthread_mutex_t threadinfo_mx = PTHREAD_MUTEX_INITIALIZER;
-static pthread_key_t key;
+static pthread_key_t threadkey;
 
 
 /* ----------- Global Functions ---------------------------------- */
@@ -124,7 +129,7 @@ void __attribute__ ((constructor)) su_init(void)
     }
 
     /* Initialize thread key, to with callback at thread termination */
-    pthread_key_create(&key, su_thread_fini);
+    pthread_key_create(&threadkey, su_thread_fini);
  
     /* Register main thread */
     su_thread_init(SU_THREAD_MAIN, NULL, NULL);
@@ -170,7 +175,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
         tstart->attr = calloc(1, sizeof(pthread_attr_t));
         if(tstart->attr)
         {
-          memcpy((void *) tstart->attr, (void *) attr, sizeof(pthread_attr_t));
+          memcpy((void *) tstart->attr, (const void *) attr, sizeof(pthread_attr_t));
         }
         else
         {
@@ -251,7 +256,7 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
 
     if(key_value)
     {
-      pthread_setspecific(key, key_value);
+      pthread_setspecific(threadkey, key_value);
 
       /* Get requested stack size */
       if(rattr)

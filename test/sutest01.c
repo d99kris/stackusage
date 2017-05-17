@@ -22,12 +22,12 @@
 
 
 /* ----------- Local Function Prototypes ------------------------- */
-static pthread_t spawn_thread(int stack_usage);
+static pthread_t spawn_thread(int *stack_usage);
 static void *thread_start(void *arg);
 
 
 /* ----------- File Global Variables ----------------------------- */
-static const int thread_stack_usage[NUM_THREADS] =
+static int thread_stack_usage[NUM_THREADS] =
 {
   0,
   4096,
@@ -38,7 +38,7 @@ static const int thread_stack_usage[NUM_THREADS] =
 
 
 /* ----------- Global Functions ---------------------------------- */
-int main(int argc, char *argv[], char *envp[])
+int main()
 {
   pthread_t tid[NUM_THREADS];
   int i = 0;
@@ -46,7 +46,7 @@ int main(int argc, char *argv[], char *envp[])
   /* Spawn threads */
   for(i = 0; i < NUM_THREADS; i++)
   {
-    tid[i] = spawn_thread(thread_stack_usage[i]);
+    tid[i] = spawn_thread(&thread_stack_usage[i]);
     usleep(10000);
   }
 
@@ -61,16 +61,16 @@ int main(int argc, char *argv[], char *envp[])
 
 
 /* ----------- Local Functions ----------------------------------- */
-static pthread_t spawn_thread(int stack_usage)
+static pthread_t spawn_thread(int *stack_usage)
 {
   pthread_t tid;
   pthread_attr_t attr;
 
   pthread_attr_init(&attr);
-  pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + stack_usage);
+  pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + *stack_usage);
   printf("Starting thread size=%d usage=%d\n",
-         PTHREAD_STACK_MIN + stack_usage, stack_usage);
-  pthread_create(&tid, &attr, &thread_start, &stack_usage);
+         PTHREAD_STACK_MIN + *stack_usage, *stack_usage);
+  pthread_create(&tid, &attr, &thread_start, stack_usage);
   pthread_attr_destroy(&attr);
 
   return tid;

@@ -24,9 +24,9 @@ Download the source code:
 
     git clone https://github.com/d99kris/stackusage && cd stackusage
 
-Configure and build:
+Generate Makefile and build:
 
-    ./configure && make
+    mkdir -p build && cd build && cmake .. && make -s
 
 Optionally install in system:
 

@@ -75,7 +75,7 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 # Start program with libstackusage
 if [ "$(uname)" == "Darwin" ]; then
   # Mac OS X
-  LIBNAME="libstackusage.1.dylib"
+  LIBNAME="libstackusage.dylib"
 
   # Supported library paths
   LIBPATHS=(
