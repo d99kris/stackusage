@@ -20,6 +20,10 @@ which generally does not work with third-party applications in a standard system
 
 Installation
 ============
+Pre-requisites (Ubuntu):
+
+    sudo apt install git cmake build-essential
+
 Download the source code:
 
     git clone https://github.com/d99kris/stackusage && cd stackusage
@@ -41,11 +45,11 @@ General usage syntax:
 
 Example checking stack usage of test program 'sutest01' with stackusage installed on system:
 
-    stackusage ./build/sutest01
+    stackusage ./sutest01
 
 Example checking stack usage of test program 'sutest02' without stackusage being installed on system:
 
-    ./build/stackusage ./build/sutest02
+    ./stackusage ./sutest02
 
 Advanced Usage (Library)
 ========================
@@ -63,7 +67,7 @@ General usage syntax:
 Example using libstackusage (without system install) with gedit and logging
 output to stderr:
 
-    SU_STDERR=1 LD_PRELOAD="./build/libstackusage.so" gedit
+    SU_STDERR=1 LD_PRELOAD="./libstackusage.so" gedit
 
 Example using libstackusage (system installed) with ls and logging
 output to syslog:
@@ -73,7 +77,7 @@ output to syslog:
 Example using libstackusage (without system install) with sutest01 application
 logging output to stderr and a named file /tmp/log.txt:
 
-    SU_STDERR=1 SU_FILE="/tmp/log.txt" LD_PRELOAD="./build/libstackusage.so" ./build/sutest01
+    SU_STDERR=1 SU_FILE="/tmp/log.txt" LD_PRELOAD="./libstackusage.so" ./sutest01
 
 macOS / OS X
 ------------
@@ -85,13 +89,13 @@ General usage syntax:
 Example using libstackusage (without system install) with sutest01 application
 logging output to stderr and syslog:
 
-    SU_STDERR=1 SU_SYSLOG=1 DYLD_INSERT_LIBRARIES="./build/libstackusage.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 ./build/sutest01
+    SU_STDERR=1 SU_SYSLOG=1 DYLD_INSERT_LIBRARIES="./libstackusage.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 ./sutest01
 
 Output
 ======
 Example output:
 
-    $ ./build/stackusage ./build/sutest01
+    $ ./stackusage ./sutest01
     stackusage log start ----------------------------------------------------
       pid  id    tid  requested     actual     maxuse  max%    dur  funcP
     23930   0  23930    8388608    8384512       4144     0      0  (nil)
@@ -116,7 +120,7 @@ Description of columns:
 
 The function that funcP points to can be determined for example using addr2line:
 
-    $ addr2line -f -e ./build/sutest01 0x4009b0
+    $ addr2line -f -e ./sutest01 0x4009b0
     thread_start
     ./tests/sutest01.c:81
 
