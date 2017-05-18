@@ -18,15 +18,6 @@
 
 
 /* ----------- Defines ------------------------------------------- */
-/* Temporary pthread limits, to be removed */
-#ifndef PTHREAD_KEYS_MAX
-#define PTHREAD_KEYS_MAX 128
-#endif
-
-#ifndef PTHREAD_STACK_MIN
-#define PTHREAD_STACK_MIN 16384
-#endif
-
 #define NUM_THREADS  (PTHREAD_KEYS_MAX + 1)
 
 
@@ -36,7 +27,7 @@ static void *thread_start(void *arg);
 
 
 /* ----------- Global Functions ---------------------------------- */
-int main()
+int main(void)
 {
   pthread_t tid[NUM_THREADS];
   int i = 0;

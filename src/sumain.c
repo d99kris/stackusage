@@ -9,18 +9,18 @@
  */
 
 /* ----------- Includes ------------------------------------------ */
+#define _GNU_SOURCE
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
-#include <unistd.h>
 #include <sys/resource.h>
 
-#define __USE_GNU
 #include <dlfcn.h>
 #include <pthread.h>
+#include <unistd.h>
 #ifdef __linux__
 #include <sys/syscall.h>
 #endif
@@ -238,9 +238,6 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
                            void *func_ptr)
 {
   struct su_threadinfo_s *threadinfo = NULL;
-#ifndef __APPLE__
-  pthread_attr_t attr;
-#endif
   
   threadinfo = calloc(sizeof(struct su_threadinfo_s), 1);
   if(threadinfo == NULL)
@@ -338,6 +335,7 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
   threadinfo->stack_addr -= threadinfo->stack_size;
   threadinfo->guard_size = 0;
 #else
+  pthread_attr_t attr;
   if(pthread_getattr_np(threadinfo->pthread, &attr) == 0)
   {
     size_t stack_size = 0;

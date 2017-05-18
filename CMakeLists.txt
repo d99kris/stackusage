@@ -1,9 +1,10 @@
 # Project
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(stackusage VERSION 1.0 LANGUAGES C)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -Wextra -Wshadow -Wpointer-arith -Wcast-qual \
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=600 \
+                   -Wall -Wextra -Wshadow -Wpointer-arith -Wcast-qual \
                    -Wstrict-prototypes -Wmissing-prototypes -Wno-missing-braces -Wswitch-default \
-                   -Wcast-align -Wunreachable-code -Wundef -Wuninitialized")
+                   -Wcast-align -Wunreachable-code -Wundef -Wuninitialized ")
 
 # Library
 add_library(stackusage SHARED src/sumain.c)
