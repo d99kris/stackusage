@@ -1,7 +1,7 @@
 # Project
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(stackusage VERSION 1.0 LANGUAGES C)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -g -D_XOPEN_SOURCE=600 \
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -g \
                    -Wall -Wextra -Wshadow -Wpointer-arith -Wcast-qual \
                    -Wstrict-prototypes -Wmissing-prototypes -Wno-missing-braces -Wswitch-default \
                    -Wcast-align -Wunreachable-code -Wundef -Wuninitialized ")
