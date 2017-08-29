@@ -1,11 +1,24 @@
 Stackusage
 ==========
-Stackusage is a tool which allows a user to determine the stack usage of a
-Linux application (main thread and native pthread child threads).
-A primary use case may be to determine stack utilization for child
-threads, and adjust the stack size allocation to provide desired margin. This
-is particularly useful for applications and libraries designed to work in
-resource-constrained environments, such as embedded systems.
+Stackusage measures stack usage in Linux and macOS applications (main thread and
+native pthread child threads). The measured stack utilization data can be used to
+adjust the stack size allocation to provide desired margin for child threads. This
+is primarily useful for applications and libraries designed to work in
+resource-constrained environments (such as embedded systems).
+
+Example Usage
+=============
+
+    $ stackusage ./sutest01
+    stackusage log start ----------------------------------------------------
+      pid  id    tid  requested     actual     maxuse  max%    dur  funcP
+    23930   0  23930    8388608    8384512       4144     0      0  (nil)
+    23930   1  23931      16384      16384       9336    56      0  0x4009b0
+    23930   2  23932      20480      20480      13528    66      0  0x4009b0
+    23930   3  23933      24576      24576      16728    68      0  0x4009b0
+    23930   4  23934      32768      32768      24920    76      0  0x4009b0
+    23930   5  23935      49152      49152      41304    84      0  0x4009b0
+    stackusage log end ------------------------------------------------------
 
 Supported Platforms
 ===================
@@ -47,55 +60,11 @@ Example checking stack usage of test program 'sutest01' with stackusage installe
 
     stackusage ./sutest01
 
-Example checking stack usage of test program 'sutest02' without stackusage being installed on system:
-
-    ./stackusage ./sutest02
-
-Advanced Usage (Library)
-========================
-
-For more detailed controls of stack usage logging, one may manually load and setup the
-underlying libstackusage library as described in this section.
-
-Linux
------
-
-General usage syntax:
-
-    [SU_FILE=path] [SU_STDERR=1] [SU_SYSLOG=1] LD_PRELOAD="/path/to/libstackusage.so" <application>
-
-Example using libstackusage (without system install) with gedit and logging
-output to stderr:
-
-    SU_STDERR=1 LD_PRELOAD="./libstackusage.so" gedit
-
-Example using libstackusage (system installed) with ls and logging
-output to syslog:
-
-    SU_SYSLOG=1 LD_PRELOAD="/usr/local/lib/libstackusage.so" ls
-
-Example using libstackusage (without system install) with sutest01 application
-logging output to stderr and a named file /tmp/log.txt:
-
-    SU_STDERR=1 SU_FILE="/tmp/log.txt" LD_PRELOAD="./libstackusage.so" ./sutest01
-
-macOS / OS X
-------------
-
-General usage syntax:
-
-    [SU_FILE=path] [SU_STDERR=1] [SU_SYSLOG=1] DYLD_INSERT_LIBRARIES="/path/to/libstackusage.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 <application>
-
-Example using libstackusage (without system install) with sutest01 application
-logging output to stderr and syslog:
-
-    SU_STDERR=1 SU_SYSLOG=1 DYLD_INSERT_LIBRARIES="./libstackusage.dylib" DYLD_FORCE_FLAT_NAMESPACE=1 ./sutest01
-
-Output
-======
+Output Format
+=============
 Example output:
 
-    $ ./stackusage ./sutest01
+    $ stackusage ./sutest01
     stackusage log start ----------------------------------------------------
       pid  id    tid  requested     actual     maxuse  max%    dur  funcP
     23930   0  23930    8388608    8384512       4144     0      0  (nil)
@@ -128,8 +97,8 @@ Technical Details
 =================
 Stackusage intercepts calls to pthread_create and fills the thread
 stack with a dummy data pattern. It also registers a callback routine to be
-called upon thread termination. For main thread stack it utilizes
-constructor and destructor routines.
+called upon thread termination. In the callback routine the amount of remaining
+dummy pattern in the stack is checked, in order to determine the stack usage.
 
 License
 =======
