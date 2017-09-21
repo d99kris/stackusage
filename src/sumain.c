@@ -31,7 +31,9 @@
 #define SU_ENV_STDERR   "SU_STDERR"
 #define SU_ENV_SYSLOG   "SU_SYSLOG"
 #define SU_FILL_BYTE    0xcd
-#define SU_FILL_OFFSET  128
+#define SU_FILL_OFFSET  512
+#define SU_GROW_MARGIN  (256*1024)
+#define SU_DUMMY_USE    (16*1024)
 
 
 /* ----------- Macros -------------------------------------------- */
@@ -88,6 +90,7 @@ void __attribute__ ((destructor)) su_fini(void);
 
 /* ----------- Local Function Prototypes ------------------------- */
 static void *su_start_thread(void *arg);
+static void su_use_stack(char *base, long size);
 static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
                            void *func_ptr);
 static void su_thread_fini(void *key);
@@ -234,6 +237,22 @@ static void *su_start_thread(void *startarg)
 }
 
 
+static void su_use_stack(char *base, long size)
+{
+  char arr[SU_DUMMY_USE];
+  char here;
+  memset(arr, rand() % 255, SU_DUMMY_USE);
+  if ((labs(&here - base) + SU_DUMMY_USE) < size)
+  {
+    su_use_stack(base, size);
+  }
+  else
+  {
+    return;
+  }
+}
+
+
 static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
                            void *func_ptr)
 {
@@ -369,8 +388,9 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
 
   /* Get current stack position (base), and fill unused stack with data */
   {
-    char stack_var;
+    int grow_margin = 0;
     char *fill_ptr = NULL;
+    char stack_var;
 
     if(su_get_stack_growth(&stack_var) > 0)
     {
@@ -379,9 +399,19 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
       /* Store end address */
       threadinfo->stack_end = (char *) threadinfo->stack_addr +
         threadinfo->stack_size;
+
       /* Fill stack starting at offset, for stack that is in use */
       fill_ptr = (&stack_var) + SU_FILL_OFFSET;
-      while(fill_ptr < (char *) threadinfo->stack_end)
+
+      /* Some OS do not allocate process stack until used, so use it */
+      if(threadtype == SU_THREAD_MAIN)
+      {
+        su_use_stack(fill_ptr, fill_ptr - threadinfo->stack_addr);
+        grow_margin = SU_GROW_MARGIN;
+      }
+
+      /* Fill stack with pattern */
+      while((fill_ptr) < ((char *) threadinfo->stack_addr - grow_margin))
       {
         *fill_ptr = SU_FILL_BYTE;
         fill_ptr++;
@@ -393,12 +423,23 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
 
       /* Guard is included at base of stack, adjust for that */
       threadinfo->stack_addr += threadinfo->guard_size;
+
       /* Store end address */
       threadinfo->stack_end = (char *) threadinfo->stack_addr +
         threadinfo->stack_size;
+
       /* Fill stack starting at offset, for stack that is in use */
       fill_ptr = (&stack_var) - SU_FILL_OFFSET;
-      while(fill_ptr > (char *) threadinfo->stack_addr)
+
+      /* Some OS do not allocate process stack until used, so use it */
+      if(threadtype == SU_THREAD_MAIN)
+      {
+        su_use_stack(fill_ptr, fill_ptr - threadinfo->stack_addr);
+        grow_margin = SU_GROW_MARGIN;
+      }
+
+      /* Fill stack with pattern */
+      while((fill_ptr) > ((char *) threadinfo->stack_addr + grow_margin))
       {
         *fill_ptr = SU_FILL_BYTE;
         fill_ptr--;
@@ -487,9 +528,10 @@ static void su_get_stack_usage(struct su_threadinfo_s *threadinfo)
 {
   char stack_var;
   char *read_ptr = NULL;
+  int grow_margin = (threadinfo->threadtype == SU_THREAD_MAIN) ? SU_GROW_MARGIN : 0;
   if(su_get_stack_growth(&stack_var) > 0)
   {
-    read_ptr = (char *)(threadinfo->stack_end) - 1;
+    read_ptr = (char *)(threadinfo->stack_end) - 1 - grow_margin;
     while((*read_ptr & 0xff) == SU_FILL_BYTE)
     {
       read_ptr--;
@@ -498,7 +540,7 @@ static void su_get_stack_usage(struct su_threadinfo_s *threadinfo)
   }
   else
   {
-    read_ptr = (char *)(threadinfo->stack_addr) + 1;
+    read_ptr = (char *)(threadinfo->stack_addr) + 1 + grow_margin;
     while((*read_ptr & 0xff) == SU_FILL_BYTE)
     {
       read_ptr++;
