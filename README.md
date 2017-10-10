@@ -1,5 +1,10 @@
 Stackusage
 ==========
+
+| **Linux + Mac** |
+|-----------------|
+| [![Build status](https://travis-ci.org/d99kris/stackusage.svg?branch=master)](https://travis-ci.org/d99kris/stackusage) |
+
 Stackusage measures stack usage in Linux and macOS applications (main thread and
 native pthread child threads). The measured stack utilization data can be used to
 adjust the stack size allocation to provide desired margin for child threads. This
@@ -9,7 +14,7 @@ resource-constrained environments (such as embedded systems).
 Example Usage
 =============
 
-    $ stackusage ./sutest01
+    $ stackusage ./ex001
     stackusage log start ----------------------------------------------------
       pid  id    tid  requested     actual     maxuse  max%    dur  funcP
     23930   0  23930    8388608    8384512       4144     0      0  (nil)
@@ -56,15 +61,14 @@ General usage syntax:
 
     stackusage <application> [application arguments]
 
-Example checking stack usage of test program 'sutest01' with stackusage installed on system:
+Example checking stack usage of test program 'ex001' with stackusage installed on system:
 
-    stackusage ./sutest01
+    stackusage ./ex001
 
 Output Format
 =============
 Example output:
 
-    $ stackusage ./sutest01
     stackusage log start ----------------------------------------------------
       pid  id    tid  requested     actual     maxuse  max%    dur  funcP
     23930   0  23930    8388608    8384512       4144     0      0  (nil)
@@ -89,9 +93,9 @@ Description of columns:
 
 The function that funcP points to can be determined for example using addr2line:
 
-    $ addr2line -f -e ./sutest01 0x4009b0
+    $ addr2line -f -e ./ex001 0x4009b0
     thread_start
-    ./tests/sutest01.c:81
+    ./tests/ex001.c:81
 
 Technical Details
 =================

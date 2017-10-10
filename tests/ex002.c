@@ -1,5 +1,5 @@
 /*
- * sutest02.c
+ * ex002.c
  *
  * Copyright (C) 2015-2017 Kristofer Berggren
  * All rights reserved.

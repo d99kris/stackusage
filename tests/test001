@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Environment
+RV=0
+TMPDIR=$(mktemp -d)
+
+# Run application
+./stackusage ./ex001 > ${TMPDIR}/out.txt 2> ${TMPDIR}/err.txt
+
+# Expected
+# stackusage log start ----------------------------------------------------
+#   pid  id    tid  requested     actual     maxuse  max%    dur  funcP
+# 21941   0  21941    8388608    8384512       5696     0      0  (nil)
+# 21941   1  21942      16384      16384       9368    57      0  0x64e6008fc5b
+# 21941   2  21943      20480      20480      12664    61      0  0x64e6008fc5b
+# 21941   3  21944      24576      24576      16760    68      0  0x64e6008fc5b
+# 21941   4  21945      32768      32768      24952    76      0  0x64e6008fc5b
+# 21941   5  21946      49152      49152      41336    84      0  0x64e6008fc5b
+#stackusage log end ------------------------------------------------------
+
+# Check result - number of lines
+LINECOUNT=$(cat ${TMPDIR}/err.txt | wc -l)
+if [ "${LINECOUNT}" != "9" ]; then
+  echo "Wrong number of output lines"
+  RV=1
+fi
+
+# Check result - main thread %
+MAINPER="$(cat ${TMPDIR}/err.txt | cut -c53-55 | head -n 3 | tail -n 1 | tr -d ' ')"
+if [[ "${MAINPER}" < "0" ]] || [[ "${MAINPER}" > "100" ]]; then
+  echo "Main thread max% out of absolute range (0-100): ${MAINPER}"
+  RV=1
+fi
+
+# Check result - child threads %
+cat ${TMPDIR}/err.txt | cut -c53-55 | head -n-1 | tail -n +4 | tr -d ' ' | \
+while read LINE; do
+  if [[ "${LINE}" < "10" ]] || [[ "${LINE}" > "90" ]]; then
+    echo "Child thread max% out of assumed range (10-90): ${LINE}"
+    RV=1
+  fi
+done
+
+# Output test run output on error
+if [ "${RV}" != "0" ]; then
+  echo "Output from command './stackusage ./ex001':"
+  cat ${TMPDIR}/err.txt
+fi
+
+# Cleanup
+rm -rf ${TMPDIR}
+
+# Exit
+exit ${RV}
+
