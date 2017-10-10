@@ -18,9 +18,9 @@ TMPDIR=$(mktemp -d)
 # stackusage log end ------------------------------------------------------
 
 # Check result - number of lines
-LINECOUNT=$(cat ${TMPDIR}/err.txt | wc -l)
-if [ "${LINECOUNT}" != "1029" ]; then
-  echo "Wrong number of output lines (${LINECOUNT} != 1029)"
+LINECOUNT=$(cat ${TMPDIR}/err.txt | wc -l | tr -d ' ')
+if [ "${LINECOUNT}" -lt "100" ]; then
+  echo "Wrong number of output lines (${LINECOUNT} < 100)"
   RV=1
 fi
 
@@ -31,8 +31,8 @@ if [[ "${MAINPER}" < "0" ]] || [[ "${MAINPER}" > "100" ]]; then
   RV=1
 fi
 
-# Check result - child threads %
-cat ${TMPDIR}/err.txt | cut -c53-56 | head -n-1 | tail -n +4 | tr -d ' ' | \
+# Check result - child threads % of last 32
+cat ${TMPDIR}/err.txt | cut -c53-56 | tail -n 33 | head -n 32 | tr -d ' ' | \
 while read LINE; do
   if [[ "${LINE}" < "10" ]] || [[ "${LINE}" > "90" ]]; then
     echo "Child thread max% out of assumed range (10-90): ${LINE}"
