@@ -1,7 +1,7 @@
 /*
  * sumain.c
  *
- * Copyright (C) 2015-2017 Kristofer Berggren
+ * Copyright (C) 2015-2018 Kristofer Berggren
  * All rights reserved.
  * 
  * stackusage is distributed under the BSD 3-Clause license, see LICENSE for details.
@@ -124,16 +124,6 @@ void __attribute__ ((constructor)) su_init(void)
     /* Get environment variable settings */
     su_get_env();
 
-    /* Get function ptr to real pthread_create */
-    real_pthread_create = dlsym(RTLD_NEXT, "pthread_create");
-    if(real_pthread_create == NULL)
-    {
-      SU_LOG_ERR;
-    }
-
-    /* Initialize thread key, to with callback at thread termination */
-    pthread_key_create(&threadkey, su_thread_fini);
- 
     /* Register main thread */
     su_thread_init(SU_THREAD_MAIN, NULL, NULL);
 
@@ -164,6 +154,19 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 {
   int rv = -1;
   su_threadstart_t *tstart = NULL;
+
+  if(real_pthread_create == NULL)
+  {
+    /* Get function ptr to real pthread_create */
+    real_pthread_create = dlsym(RTLD_NEXT, "pthread_create");
+    if(real_pthread_create == NULL)
+    {
+      SU_LOG_ERR;
+    }
+
+    /* Initialize thread key with callback at thread termination */
+    pthread_key_create(&threadkey, su_thread_fini);
+  }
 
   if(real_pthread_create)
   {

@@ -34,3 +34,10 @@ target_link_libraries(ex002 pthread)
 configure_file(tests/test002 ${CMAKE_CURRENT_BINARY_DIR}/test002 COPYONLY)
 add_test(test002 "${PROJECT_BINARY_DIR}/test002")
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  add_executable(ex003 tests/ex003.c)
+  target_link_libraries(ex003 pthread)
+
+  configure_file(tests/test003 ${CMAKE_CURRENT_BINARY_DIR}/test003 COPYONLY)
+  add_test(test003 "${PROJECT_BINARY_DIR}/test003")
+endif()

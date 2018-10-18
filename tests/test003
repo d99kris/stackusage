@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Environment
+RV=0
+TMPDIR=$(mktemp -d)
+
+# Run application
+./stackusage ./ex003 > ${TMPDIR}/out.txt 2> ${TMPDIR}/err.txt
+RV=${?}
+
+# Expected
+# stackusage log start ----------------------------------------------------
+#   pid  id    tid  requested     actual     maxuse  max%    dur  funcP
+# 11876   0  11876    8388608    8380416       3320     0      0  (nil)
+# 11876   1  11877    8388608    8388608       9119     0      0  0x562a09b18975
+# stackusage log end ------------------------------------------------------
+
+# Check result - number of lines
+LINECOUNT=$(cat ${TMPDIR}/err.txt | wc -l | tr -d ' ')
+if [ ${LINECOUNT} -lt 4 ]; then
+  echo "Wrong number of output lines (${LINECOUNT} < 4)"
+  RV=1
+fi
+
+# Output test run output on error
+if [ "${RV}" != "0" ]; then
+  echo "Output from command './stackusage ./ex003':"
+  cat ${TMPDIR}/err.txt
+fi
+
+# Cleanup
+rm -rf ${TMPDIR}
+
+# Exit
+exit ${RV}
+
