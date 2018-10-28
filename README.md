@@ -59,11 +59,25 @@ Usage
 
 General usage syntax:
 
-    stackusage <application> [application arguments]
+    stackusage [-o PATH] [-s SIG] PROG [ARGS..]
+
+Options:
+
+    -o <PATH>       write output to specified file path, instead of stderr
+    -s <SIG>        enable on-demand logging when signalled SIG signal
+    PROG            program to run and analyze
+    [ARGS..]        optional arguments to the program
+    --help          display this help and exit
+    --version       output version information and exit
 
 Example checking stack usage of test program 'ex001' with stackusage installed on system:
 
     stackusage ./ex001
+
+Example performing on-demand logging of program 'gedit'
+
+    stackusage -s SIGUSR1 gedit
+    kill -s SIGUSR1 `pidof gedit`
 
 Output Format
 =============
