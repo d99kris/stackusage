@@ -9,15 +9,14 @@ TMPDIR=$(mktemp -d)
 RV=${?}
 
 # Expected
-# stackusage log start ----------------------------------------------------
+# stackusage log at 2018-10-28 22:31:33 ----------------------------------------
 #   pid  id    tid  requested     actual     maxuse  max%    dur  funcP
 # 11876   0  11876    8388608    8380416       3320     0      0  (nil)
 # 11876   1  11877    8388608    8388608       9119     0      0  0x562a09b18975
-# stackusage log end ------------------------------------------------------
 
 # Check result - number of lines
 LINECOUNT=$(cat ${TMPDIR}/err.txt | wc -l | tr -d ' ')
-if [ ${LINECOUNT} -lt 4 ]; then
+if [ ${LINECOUNT} -lt 3 ]; then
   echo "Wrong number of output lines (${LINECOUNT} < 4)"
   RV=1
 fi

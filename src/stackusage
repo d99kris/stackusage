@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2015-2017 Kristofer Berggren
+# Copyright (C) 2015-2018 Kristofer Berggren
 # All rights reserved.
 #
 # stackusage is distributed under the BSD 3-Clause license, see LICENSE for details.
@@ -14,11 +14,13 @@ showusage()
   echo "designed to work in resource-constrained environments, such as "
   echo "embedded systems."
   echo ""
-  echo "Usage: stackusage PROG [ARGS..]"
+  echo "Usage: stackusage [-o PATH] [-s SIG] PROG [ARGS..]"
   echo "   or: stackusage --help"
   echo "   or: stackusage --version"
   echo ""
   echo "Options:"
+  echo "   -o <PATH>       write output to specified file path, instead of stderr"
+  echo "   -s <SIG>        enable on-demand logging when signalled SIG signal"
   echo "   PROG            program to run and analyze"
   echo "   [ARGS..]        optional arguments to the program"
   echo "   --help          display this help and exit"
@@ -30,10 +32,9 @@ showusage()
   echo "executes the program 'ls' and measures its stack usage."
   echo "Result is output to stderr on the following format:"
   echo ""
-  echo "libstackusage log start -----------------------------------------------"
-  echo "pid  id    tid  requested     actual     maxuse    max%     dur  funcP "
-  echo "108    0  11108    8388608    8388608      14808       0       0 (nil) "
-  echo "libstackusage log end -------------------------------------------------"
+  echo "stackusage log at 2018-10-28 22:33:18 ----------------------------------------"
+  echo "  pid  id    tid  requested     actual     maxuse  max%    dur  funcP"
+  echo "11863   0  11863    8388608    8384512      13944     0      0  (nil)"
   echo ""
   echo "Report bugs at https://github.com/d99kris/stackusage"
   echo ""
@@ -59,8 +60,43 @@ elif [ "${1}" == "--version" ] ; then
 elif [ "${#}" == "0" ] ; then
   showusage
   exit 1
+fi
+
+# Arguments - regular options
+SIGNO=""
+OUTFILE=""
+while getopts "?o:s:" OPT; do
+  case "${OPT}" in
+  \?)
+    showusage
+    exit 1
+    ;;
+  o)
+    OUTFILE="${OPTARG}"
+    ;;
+  s)
+    if ! [[ "${OPTARG}" =~ ^[0-9]+$ ]]; then
+      # Not a number, try signal name
+      SIGNO="$(kill -l ${OPTARG} 2> /dev/null)"
+      if [[ "${SIGNO}" == "" ]]; then
+        echo "error: unknown signal name ${OPTARG}"
+        exit 1
+      fi
+    else
+      SIGNO="${OPTARG}"
+    fi
+    ;;
+  esac
+done
+shift $((OPTIND-1))
+[ "$1" = "--" ] && shift
+
+# Arguments - ensure program specified
+if [ "${#}" == "0" ] ; then
+  showusage
+  exit 1
 else
-  PROG="${@:1}"
+  PROG="${@:1}"  
 fi
 
 # Determine self location
@@ -72,85 +108,77 @@ while [ -h "$SOURCE" ]; do
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-# Start program with libstackusage
+# Set Stackusage library name
 if [ "$(uname)" == "Darwin" ]; then
-  # Mac OS X
+  # Mac
   LIBNAME="libstackusage.dylib"
-
-  # Supported library paths
-  LIBPATHS=(
-    "${DIR}/../lib/${LIBNAME}"
-    "${DIR}/.libs/${LIBNAME}"
-    "${DIR}/${LIBNAME}"
-  )
-
-  # Iterate through library paths
-  CNT=0
-  while [ "${LIBPATHS[CNT]}" != "" ]; do
-    LIBPATH="${LIBPATHS[CNT]}"
-    if [ -e "${LIBPATH}" ]; then
-      # Create temporary output dir and set up log file path
-      TMP=$(mktemp -d)
-      TMPLOG="${TMP}/su.log"
-      # Run program
-      SU_FILE="${TMPLOG}"  DYLD_INSERT_LIBRARIES="${LIBPATH}" DYLD_FORCE_FLAT_NAMESPACE=1 "${@:1}"
-      RV=${?}
-      if [ -f "${TMPLOG}" ]; then
-        cat "${TMPLOG}" >&2
-      else
-        echo "error: unable to preload libstackusage"
-      fi
-      rm -rf "${TMP}" 2> /dev/null
-      exit ${RV}
-    fi
-    CNT=$((${CNT} + 1))
-  done
-  
-  # Report error if library not found
-  echo "error: unable to determine path of ${LIBNAME}"
-  exit 1
-
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
   # GNU/Linux
   LIBNAME="libstackusage.so"
-
-  # Supported library paths
-  LIBPATHS=(
-    "${DIR}/../lib/${LIBNAME}"
-    "${DIR}/.libs/${LIBNAME}"
-    "${DIR}/${LIBNAME}"
-  )
-
-  # Iterate through library paths
-  CNT=0
-  while [ "${LIBPATHS[CNT]}" != "" ]; do
-    LIBPATH="${LIBPATHS[CNT]}"
-    if [ -e "${LIBPATH}" ]; then
-      # Create temporary output dir and set up log file path
-      TMP=$(mktemp -d)
-      TMPLOG="${TMP}/su.log"
-      # Run program
-      SU_FILE="${TMPLOG}" LD_PRELOAD="${LIBPATH}" "${@:1}"
-      RV=${?}
-      if [ -f "${TMPLOG}" ]; then
-        cat "${TMPLOG}" >&2
-      else
-        echo "error: unable to preload libstackusage"
-      fi
-      rm -rf "${TMP}" 2> /dev/null
-      exit ${RV}
-    fi
-    CNT=$((${CNT} + 1))
-  done
-  
-  # Report error if library not found
-  echo "error: unable to determine path of ${LIBNAME}"
-  exit 1
-
 else
   # Unsupported OS
   echo "Unsupported OS"
+  exit 1
 fi
 
-exit 1
+# Supported library paths
+LIBPATHS=(
+  "${DIR}/../lib/${LIBNAME}"
+  "${DIR}/.libs/${LIBNAME}"
+  "${DIR}/${LIBNAME}"
+)
 
+# Set output path
+if [ "${OUTFILE}" == "" ]; then
+  # Create temporary output dir and set up log file path
+  TMP=$(mktemp -d)
+  TMPLOG="${TMP}/heapusage.log"
+else
+  # Clear temp log path, just to be safe
+  TMPLOG=""
+  # Delete specified output path
+  rm "${OUTFILE}" 2> /dev/null
+fi
+
+# Iterate through library paths
+RV=1
+CNT=0
+FOUND=0
+while [ "${LIBPATHS[CNT]}" != "" ]; do
+  LIBPATH="${LIBPATHS[CNT]}"
+  if [ -e "${LIBPATH}" ]; then
+
+    # Run program
+    SU_FILE="${TMPLOG}${OUTFILE}"         \
+    SU_SIGNO="${SIGNO}"                   \
+    LD_PRELOAD="${LIBPATH}"               \
+    DYLD_INSERT_LIBRARIES="${LIBPATH}"    \
+    DYLD_FORCE_FLAT_NAMESPACE=1           \
+    "${@:1}"
+
+    FOUND=1
+    RV=${?}
+    break
+  fi
+  CNT=$((${CNT} + 1))
+done
+
+# Report error if library not found
+if [ "${FOUND}" != "1" ]; then
+  echo "error: unable to determine path of ${LIBNAME}"
+  exit 1
+fi
+
+# Process temporary output dir
+if [ "${OUTFILE}" == "" ]; then
+  if [ -f "${TMPLOG}" ]; then
+    cat "${TMPLOG}" >&2
+  else
+    echo "error: unable to preload ${LIBNAME}"
+  fi
+
+  rm -rf "${TMP}" 2> /dev/null
+fi
+
+# Exit
+exit ${RV}

@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Environment
+RV=0
+TMPDIR=$(mktemp -d)
+
+# Run application
+./stackusage -o ${TMPDIR}/log.txt -s SIGUSR1 ./ex004 > ${TMPDIR}/out.txt 2> ${TMPDIR}/err.txt &
+CHILD_PID="${!}"
+sleep 1
+kill -s SIGUSR1 `pidof ex004`
+wait ${CHILD_PID}
+
+# Expected log.txt
+# stackusage log at 2018-10-28 22:48:18 ----------------------------------------
+#   pid  id    tid  requested     actual     maxuse  max%    dur  funcP
+# 14616   0  14616    8388608    8380416       2095     0      0  (nil)
+# stackusage log at 2018-10-28 22:48:18 ----------------------------------------
+#   pid  id    tid  requested     actual     maxuse  max%    dur  funcP
+# 14616   0  14616    8388608    8380416       5896     0      1  (nil)
+
+# Check result - number of lines
+LINECOUNT=$(cat ${TMPDIR}/log.txt | wc -l | tr -d ' ')
+if [ "${LINECOUNT}" != "6" ]; then
+  echo "Wrong number of output lines (${LINECOUNT}!=9)"
+  RV=1
+fi
+
+# Output test run output on error
+if [ "${RV}" != "0" ]; then
+  echo "Output from command on stderr:"
+  cat ${TMPDIR}/err.txt
+  echo "Output from command on stdout:"
+  cat ${TMPDIR}/out.txt
+  echo "Output from command in logfile:"
+  cat ${TMPDIR}/log.txt
+fi
+
+# Cleanup
+rm -rf ${TMPDIR}
+
+# Exit
+exit ${RV}
+

@@ -11,6 +11,7 @@
 /* ----------- Includes ------------------------------------------ */
 #define _GNU_SOURCE
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +30,7 @@
 /* ----------- Defines ------------------------------------------- */
 #define SU_ENV_FILE     "SU_FILE"
 #define SU_ENV_STDERR   "SU_STDERR"
+#define SU_ENV_SIGNO    "SU_SIGNO"
 #define SU_ENV_SYSLOG   "SU_SYSLOG"
 #define SU_FILL_BYTE    0xcd
 #define SU_FILL_OFFSET  512
@@ -86,6 +88,7 @@ typedef struct su_threadinfo_s
 /* ----------- Global Function Prototypes ------------------------ */
 void __attribute__ ((constructor)) su_init(void);
 void __attribute__ ((destructor)) su_fini(void);
+void signal_handler(int);
 
 
 /* ----------- Local Function Prototypes ------------------------- */
@@ -108,6 +111,7 @@ static int (*real_pthread_create) (pthread_t *thread,
                                    void *(*start_routine) (void *),
                                    void *arg) = NULL;
 static int su_inited = 0;
+static int su_log_signo = 0;
 static int su_log_stderr = 0;
 static int su_log_syslog = 0;
 static char *su_log_file = NULL;
@@ -127,6 +131,12 @@ void __attribute__ ((constructor)) su_init(void)
     /* Register main thread */
     su_thread_init(SU_THREAD_MAIN, NULL, NULL);
 
+    /* Register signal handler */
+    if (su_log_signo != 0)
+    {
+      signal(su_log_signo, signal_handler);
+    }
+    
     /* Store initialization state */
     su_inited = 1;
   }
@@ -146,6 +156,14 @@ void __attribute__ ((destructor)) su_fini(void)
     /* Store initialization state */
     su_inited = 0;
   }
+}
+
+
+void signal_handler(int num)
+{
+  (void)num;
+  /* Log stack usage */
+  su_log_stack_usage();
 }
 
 
@@ -486,8 +504,14 @@ static void su_log_stack_usage(void)
   struct su_threadinfo_s *threadinfo_it = NULL;
   pthread_mutex_lock(&threadinfo_mx);
   threadinfo_it = threadinfo_head;
-  SU_LOG("%s log start ----------------------------------------------------\n",
-         su_name);
+
+  char timestamp[20];
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+  snprintf(timestamp, sizeof(timestamp), "%04d-%02d-%02d %02d:%02d:%02d",
+           tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+  SU_LOG("%s log at %s ----------------------------------------\n",
+         su_name, timestamp);
   SU_LOG("  pid  id    tid  requested     actual     maxuse  max%%    dur"
          "  funcP\n");
   while(threadinfo_it)
@@ -514,8 +538,6 @@ static void su_log_stack_usage(void)
 
     threadinfo_it = threadinfo_it->next;
   }
-  SU_LOG("%s log end ------------------------------------------------------\n",
-         su_name);
   pthread_mutex_unlock(&threadinfo_mx);
 }
 
@@ -618,6 +640,11 @@ static void su_get_env(void)
   if(getenv(SU_ENV_SYSLOG))
   {
     su_log_syslog = 1;
+  }
+
+  if(getenv(SU_ENV_SIGNO))
+  {
+    su_log_signo = strtol(getenv(SU_ENV_SIGNO), NULL, 10);
   }
 
   su_log_file = getenv(SU_ENV_FILE);
