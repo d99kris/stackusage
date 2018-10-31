@@ -132,7 +132,7 @@ LIBPATHS=(
 if [ "${OUTFILE}" == "" ]; then
   # Create temporary output dir and set up log file path
   TMP=$(mktemp -d)
-  TMPLOG="${TMP}/heapusage.log"
+  TMPLOG="${TMP}/stackusage.log"
 else
   # Clear temp log path, just to be safe
   TMPLOG=""
