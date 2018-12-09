@@ -59,10 +59,11 @@ Usage
 
 General usage syntax:
 
-    stackusage [-o PATH] [-s SIG] PROG [ARGS..]
+    stackusage [-d] [-o PATH] [-s SIG] PROG [ARGS..]
 
 Options:
 
+    -d              debug mode, running program through debugger
     -o <PATH>       write output to specified file path, instead of stderr
     -s <SIG>        enable on-demand logging when signalled SIG signal
     PROG            program to run and analyze

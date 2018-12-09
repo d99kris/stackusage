@@ -14,11 +14,12 @@ showusage()
   echo "designed to work in resource-constrained environments, such as "
   echo "embedded systems."
   echo ""
-  echo "Usage: stackusage [-o PATH] [-s SIG] PROG [ARGS..]"
+  echo "Usage: stackusage [-d] [-o PATH] [-s SIG] PROG [ARGS..]"
   echo "   or: stackusage --help"
   echo "   or: stackusage --version"
   echo ""
   echo "Options:"
+  echo "   -d              debug mode, running program through debugger"
   echo "   -o <PATH>       write output to specified file path, instead of stderr"
   echo "   -s <SIG>        enable on-demand logging when signalled SIG signal"
   echo "   PROG            program to run and analyze"
@@ -42,9 +43,9 @@ showusage()
 
 showversion()
 {
-  echo "stackusage v1.0"
+  echo "stackusage v1.1"
   echo ""
-  echo "Copyright (C) 2015-2017 Kristofer Berggren"
+  echo "Copyright (C) 2015-2018 Kristofer Berggren"
   echo ""
   echo "stackusage is distributed under the BSD 3-Clause license."
   echo ""
@@ -63,13 +64,17 @@ elif [ "${#}" == "0" ] ; then
 fi
 
 # Arguments - regular options
+DEBUG="0"
 SIGNO=""
 OUTFILE=""
-while getopts "?o:s:" OPT; do
+while getopts "?do:s:" OPT; do
   case "${OPT}" in
   \?)
     showusage
     exit 1
+    ;;
+  d)
+    DEBUG="1"
     ;;
   o)
     OUTFILE="${OPTARG}"
@@ -128,10 +133,12 @@ LIBPATHS=(
   "${DIR}/${LIBNAME}"
 )
 
+# Create temp dir
+TMP=$(mktemp -d)
+
 # Set output path
 if [ "${OUTFILE}" == "" ]; then
   # Create temporary output dir and set up log file path
-  TMP=$(mktemp -d)
   TMPLOG="${TMP}/stackusage.log"
 else
   # Clear temp log path, just to be safe
@@ -149,12 +156,23 @@ while [ "${LIBPATHS[CNT]}" != "" ]; do
   if [ -e "${LIBPATH}" ]; then
 
     # Run program
-    SU_FILE="${TMPLOG}${OUTFILE}"         \
-    SU_SIGNO="${SIGNO}"                   \
-    LD_PRELOAD="${LIBPATH}"               \
-    DYLD_INSERT_LIBRARIES="${LIBPATH}"    \
-    DYLD_FORCE_FLAT_NAMESPACE=1           \
-    "${@:1}"
+    if [ "${DEBUG}" == "0" ]; then
+      SU_FILE="${TMPLOG}${OUTFILE}"         \
+      SU_SIGNO="${SIGNO}"                   \
+      LD_PRELOAD="${LIBPATH}"               \
+      DYLD_INSERT_LIBRARIES="${LIBPATH}"    \
+      DYLD_FORCE_FLAT_NAMESPACE=1           \
+      "${@:1}"
+    else
+      LLDBCMDPATH="${TMP}/lldb.cmd"
+      echo "env SU_FILE=\"${TMPLOG}${OUTFILE}\""        >  "${LLDBCMDPATH}"
+      echo "env SU_SIGNO=\"${SIGNO}\""                  >> "${LLDBCMDPATH}"
+      echo "env LD_PRELOAD=\"${LIBPATH}\""              >> "${LLDBCMDPATH}"
+      echo "env DYLD_INSERT_LIBRARIES=\"${LIBPATH}\""   >> "${LLDBCMDPATH}"
+      echo "env DYLD_FORCE_FLAT_NAMESPACE=1"            >> "${LLDBCMDPATH}"
+      echo "run ${@:2}"                                 >> "${LLDBCMDPATH}"
+      lldb "${1}" -s "${LLDBCMDPATH}"
+    fi
 
     FOUND=1
     RV=${?}
@@ -176,9 +194,10 @@ if [ "${OUTFILE}" == "" ]; then
   else
     echo "error: unable to preload ${LIBNAME}"
   fi
-
-  rm -rf "${TMP}" 2> /dev/null
 fi
+
+# Cleanup temp dir
+rm -rf "${TMP}"
 
 # Exit
 exit ${RV}
