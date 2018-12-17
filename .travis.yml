@@ -8,8 +8,10 @@ os:
   - linux
   - osx
 
-install:
-  - if [ $TRAVIS_OS_NAME = osx ]; then brew update && brew bundle; fi
+addons:
+  homebrew:
+    update: true
+    brewfile: true
 
 script:
   - mkdir -p build
