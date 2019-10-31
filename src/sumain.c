@@ -81,6 +81,7 @@ typedef struct su_threadinfo_s
   time_t time_stop;
   int time_duration;
   void *func_ptr;
+  char thread_name[16];
   struct su_threadinfo_s *next;
 } su_threadinfo_t;
 
@@ -147,7 +148,7 @@ void __attribute__ ((destructor)) su_fini(void)
 {
   if(su_inited == 1)
   {
-    /* Unegister main thread */
+    /* Unregister main thread */
     su_thread_fini(NULL);
 
     /* Log stack usage in process */
@@ -364,6 +365,8 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
   threadinfo->threadtype = threadtype;
   threadinfo->pthread = pthread_self();
   threadinfo->func_ptr = func_ptr;
+  threadinfo->thread_name[0] = '\0';
+
 #ifdef __linux__
   threadinfo->tid = syscall(SYS_gettid);
 #endif
@@ -513,7 +516,7 @@ static void su_log_stack_usage(void)
   SU_LOG("%s log at %s ----------------------------------------\n",
          su_name, timestamp);
   SU_LOG("  pid  id    tid  requested     actual     maxuse  max%%    dur"
-         "  funcP\n");
+         "               funcP name\n");
   while(threadinfo_it)
   {
     int usage_percent = 0;
@@ -524,7 +527,7 @@ static void su_log_stack_usage(void)
         (int) threadinfo_it->stack_req_size;
     }
 
-    SU_LOG("%5d %3d  %5d  %9d  %9d  %9d   %3d  %5d  %p\n",
+    SU_LOG("%5d %3d  %5d  %9d  %9d  %9d   %3d  %5d  %18p %s\n",
            getpid(),
            threadinfo_it->id, 
            threadinfo_it->tid,
@@ -533,7 +536,8 @@ static void su_log_stack_usage(void)
            (int) threadinfo_it->stack_max_usage,
            (int) usage_percent,
            threadinfo_it->time_duration,
-           threadinfo_it->func_ptr
+           threadinfo_it->func_ptr,
+           threadinfo_it->thread_name
           );
 
     threadinfo_it = threadinfo_it->next;
@@ -607,6 +611,9 @@ static void su_thread_fini(void *key)
 
   /* Update its stack usage info */
   su_get_stack_usage(threadinfo);
+
+  /* Record the thread name */
+  pthread_getname_np(threadinfo->pthread, threadinfo->thread_name, 16);
 
   /* Store stop time and calculate duration */
   if(time(&(threadinfo->time_stop)) != ((time_t)-1))
