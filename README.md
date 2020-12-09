@@ -1,9 +1,9 @@
 Stackusage
 ==========
 
-| **Linux + Mac** |
-|-----------------|
-| [![Build status](https://travis-ci.com/d99kris/stackusage.svg?branch=master)](https://travis-ci.com/d99kris/stackusage) |
+| **Linux** | **Mac** |
+|-----------|---------|
+| [![Linux](https://github.com/d99kris/stackusage/workflows/Linux/badge.svg)](https://github.com/d99kris/stackusage/actions?query=workflow%3ALinux) | [![macOS](https://github.com/d99kris/stackusage/workflows/macOS/badge.svg)](https://github.com/d99kris/stackusage/actions?query=workflow%3AmacOS) |
 
 Stackusage measures stack usage in Linux and macOS applications (main thread and
 native pthread child threads). The measured stack utilization data can be used to
