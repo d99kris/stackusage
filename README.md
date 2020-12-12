@@ -5,11 +5,11 @@ Stackusage
 |-----------|---------|
 | [![Linux](https://github.com/d99kris/stackusage/workflows/Linux/badge.svg)](https://github.com/d99kris/stackusage/actions?query=workflow%3ALinux) | [![macOS](https://github.com/d99kris/stackusage/workflows/macOS/badge.svg)](https://github.com/d99kris/stackusage/actions?query=workflow%3AmacOS) |
 
-Stackusage measures stack usage in Linux and macOS applications (main thread and
-native pthread child threads). The measured stack utilization data can be used to
-adjust the stack size allocation to provide desired margin for child threads. This
-is primarily useful for applications and libraries designed to work in
-resource-constrained environments (such as embedded systems).
+Stackusage measures stack usage in Linux and macOS applications (main thread
+and native pthread child threads). The measured stack utilization data can be
+used to adjust the stack size allocation to provide desired margin for child
+threads. This is primarily useful for applications and libraries designed to
+work in resource-constrained environments (such as embedded systems).
 
 Example Usage
 =============
@@ -28,13 +28,15 @@ Example Usage
 Supported Platforms
 ===================
 Stackusage is primarily developed and tested on Linux, but basic
-functionality should work in macOS / OS X as well. Current version has been tested on:
-- OS X El Capitan 10.11
-- Ubuntu 16.04 LTS
+functionality should work in macOS / OS X as well. Current version has been
+tested on:
+- macOS Big Sur 11.0
+- Ubuntu 20.04 LTS
 
-Limitation: On macOS / OS X this tool relies on code injection using DYLD_INSERT_LIBRARIES,
-which generally does not work with third-party applications in a standard system. Using it on
-(your own) applications built from source should work fine though.
+Limitation: On macOS / OS X this tool relies on code injection using
+DYLD_INSERT_LIBRARIES, which generally does not work with third-party
+applications in a standard system. Using it on (your own) applications built
+from source should work fine though.
 
 Installation
 ============
@@ -71,7 +73,8 @@ Options:
     --help          display this help and exit
     --version       output version information and exit
 
-Example checking stack usage of test program 'ex001' with stackusage installed on system:
+Example checking stack usage of test program 'ex001' with stackusage installed
+on system:
 
     stackusage ./ex001
 
@@ -106,7 +109,8 @@ Description of columns:
     dur         thread duration in seconds
     funcP       (nil) for main, pointer to start_routine for child threads
 
-The function that funcP points to can be determined for example using addr2line:
+The function that funcP points to can be determined for example using
+addr2line:
 
     $ addr2line -f -e ./ex001 0x4009b0
     thread_start
