@@ -28,9 +28,9 @@ showusage()
   echo "   --version       output version information and exit"
   echo ""
   echo "Examples:"
-  echo "stackusage ls"
+  echo "stackusage ./ex001"
   echo ""
-  echo "executes the program 'ls' and measures its stack usage."
+  echo "executes the program 'ex001' and measures its stack usage."
   echo "Result is output to stderr on the following format:"
   echo ""
   echo "stackusage log at 2018-10-28 22:33:18 ----------------------------------------"
@@ -43,7 +43,7 @@ showusage()
 
 showversion()
 {
-  echo "stackusage v1.12"
+  echo "stackusage v1.14"
   echo ""
   echo "Copyright (C) 2015-2020 Kristofer Berggren"
   echo ""
@@ -193,6 +193,11 @@ if [ "${OUTFILE}" == "" ]; then
     cat "${TMPLOG}" >&2
   else
     echo "error: unable to preload ${LIBNAME}"
+    if [ "$(uname)" == "Darwin" ]; then
+      echo "note that stackusage on macOS cannot measure stack usage on"
+      echo "programs protected by System Integrity Protection, it should"
+      echo "however work on locally compiled programs."
+    fi
   fi
 fi
 
