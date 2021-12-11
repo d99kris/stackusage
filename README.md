@@ -123,6 +123,18 @@ stack with a dummy data pattern. It also registers a callback routine to be
 called upon thread termination. In the callback routine the amount of remaining
 dummy pattern in the stack is checked, in order to determine the stack usage.
 
+Interception is only possible when stackusage is built for the same
+architecture as the program being analyzed. Stackusage tries to determine if
+there is a mismatch, if encountered it will output a warning like this:
+
+    warning: libstackusage.so architecture (ELF 64-bit) does not appear
+    to match <PROG> architecture (ELF 32-bit), analysis may fail.
+
+To solve this, simply compile stackusage for the appropriate architecture, for
+example by adding `-m32` to CMAKE_C_FLAGS in CMakeLists.txt, example:
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -g -m32 \
+
 License
 =======
 Stackusage is distributed under the BSD 3-Clause license. See LICENSE file.

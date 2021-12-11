@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2015-2020 Kristofer Berggren
+# Copyright (C) 2015-2021 Kristofer Berggren
 # All rights reserved.
 #
 # stackusage is distributed under the BSD 3-Clause license, see LICENSE for details.
@@ -43,13 +43,31 @@ showusage()
 
 showversion()
 {
-  echo "stackusage v1.14"
+  echo "stackusage v1.15"
   echo ""
-  echo "Copyright (C) 2015-2020 Kristofer Berggren"
+  echo "Copyright (C) 2015-2021 Kristofer Berggren"
   echo ""
   echo "stackusage is distributed under the BSD 3-Clause license."
   echo ""
   echo "Written by Kristofer Berggren"
+}
+
+check_arch_compat()
+{
+  LIBPATH="${1}"
+  PRGPATH="$(which ${2})"
+  if [[ "${PRGPATH}" != "" ]]; then
+    PRGARCH=$(file -b ${PRGPATH} | awk '{print $1 " " $2}')
+    LIBARCH=$(file -b ${LIBPATH} | awk '{print $1 " " $2}')
+    PRGBITS=$(file -b ${PRGPATH} | awk '{print $2}' | awk -F'-' '{print $1}')
+    LIBBITS=$(file -b ${LIBPATH} | awk '{print $2}' | awk -F'-' '{print $1}')
+    if [[ "${PRGBITS}" =~ ^(32|64)$ ]] && [[ "${LIBBITS}" =~ ^(32|64)$ ]] && \
+       [[ "${PRGARCH}" != "${LIBARCH}" ]]; then
+      echo "warning: $(basename ${LIBPATH}) architecture (${LIBARCH}) does not appear"
+      echo "to match ${PRGPATH} architecture (${PRGARCH}), analysis may fail."
+      echo "see https://github.com/d99kris/stackusage#technical-details"
+    fi
+  fi
 }
 
 if [ "${1}" == "--help" ] ; then
@@ -154,6 +172,9 @@ FOUND=0
 while [ "${LIBPATHS[CNT]}" != "" ]; do
   LIBPATH="${LIBPATHS[CNT]}"
   if [ -e "${LIBPATH}" ]; then
+
+    # Check if libstackusage is compatible with program to analyze
+    check_arch_compat "${LIBPATH}" "${1}"
 
     # Run program
     if [ "${DEBUG}" == "0" ]; then
