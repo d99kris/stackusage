@@ -30,7 +30,7 @@ Supported Platforms
 Stackusage is primarily developed and tested on Linux, but basic
 functionality should work in macOS / OS X as well. Current version has been
 tested on:
-- macOS Big Sur 11.0
+- macOS Monterey 12.1
 - Ubuntu 20.04 LTS
 
 Limitation: On macOS / OS X this tool relies on code injection using

@@ -95,7 +95,7 @@ fi
 
 # tests
 if [[ "${TESTS}" == "1" ]]; then
-  cd build && ctest -C unit --output-on-failure && ctest -C perf --verbose && cd .. || exiterr "tests failed, exiting."
+  cd build && ctest --output-on-failure && cd .. || exiterr "tests failed, exiting."
 fi
 
 # doc

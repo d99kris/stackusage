@@ -1,7 +1,7 @@
 /*
  * sumain.c
  *
- * Copyright (C) 2015-2018 Kristofer Berggren
+ * Copyright (C) 2015-2022 Kristofer Berggren
  * All rights reserved.
  * 
  * stackusage is distributed under the BSD 3-Clause license, see LICENSE for details.
@@ -49,6 +49,13 @@
                             su_name, getpid(), __FUNCTION__, __LINE__)
 #define SU_LOG_WARN  SU_LOG("%s (pid %d): %s:%d warning\n", \
                             su_name, getpid(), __FUNCTION__, __LINE__)
+
+#if defined(__APPLE__)
+#define DYLD_INTERPOSE(_newfun, _orgfun) \
+__attribute__((used)) static struct{ const void *newfun; const void *orgfun; } _interpose_##_orgfun \
+__attribute__ ((section ("__DATA,__interpose"))) = { (const void *)(unsigned long)&_newfun, \
+                                                     (const void *)(unsigned long)&_orgfun }
+#endif
 
 
 /* ----------- Types --------------------------------------------- */
@@ -168,20 +175,32 @@ void signal_handler(int num)
 }
 
 
+#if defined(__APPLE__)
+int pthread_create_wrap(pthread_t *thread, const pthread_attr_t *attr,
+                        void *(*start_routine) (void *), void *arg);
+
+int pthread_create_wrap(pthread_t *thread, const pthread_attr_t *attr,
+                        void *(*start_routine) (void *), void *arg)
+#else
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine) (void *), void *arg)
+#endif
 {
   int rv = -1;
   su_threadstart_t *tstart = NULL;
 
   if(real_pthread_create == NULL)
   {
+#if defined(__APPLE__)
+    real_pthread_create = pthread_create;
+#else
     /* Get function ptr to real pthread_create */
     real_pthread_create = dlsym(RTLD_NEXT, "pthread_create");
     if(real_pthread_create == NULL)
     {
       SU_LOG_ERR;
     }
+#endif
 
     /* Initialize thread key with callback at thread termination */
     pthread_key_create(&threadkey, su_thread_fini);
@@ -225,6 +244,9 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 
   return rv;
 }
+#if defined(__APPLE__)
+DYLD_INTERPOSE(pthread_create_wrap, pthread_create);
+#endif
 
 
 /* ----------- Local Functions ----------------------------------- */

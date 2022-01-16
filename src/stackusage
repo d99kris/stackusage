@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2015-2021 Kristofer Berggren
+# Copyright (C) 2015-2022 Kristofer Berggren
 # All rights reserved.
 #
 # stackusage is distributed under the BSD 3-Clause license, see LICENSE for details.
@@ -43,9 +43,9 @@ showusage()
 
 showversion()
 {
-  echo "stackusage v1.15"
+  echo "stackusage v1.16"
   echo ""
-  echo "Copyright (C) 2015-2021 Kristofer Berggren"
+  echo "Copyright (C) 2015-2022 Kristofer Berggren"
   echo ""
   echo "stackusage is distributed under the BSD 3-Clause license."
   echo ""
@@ -182,7 +182,6 @@ while [ "${LIBPATHS[CNT]}" != "" ]; do
       SU_SIGNO="${SIGNO}"                   \
       LD_PRELOAD="${LIBPATH}"               \
       DYLD_INSERT_LIBRARIES="${LIBPATH}"    \
-      DYLD_FORCE_FLAT_NAMESPACE=1           \
       "${@:1}"
     else
       LLDBCMDPATH="${TMP}/lldb.cmd"
@@ -190,7 +189,6 @@ while [ "${LIBPATHS[CNT]}" != "" ]; do
       echo "env SU_SIGNO=\"${SIGNO}\""                  >> "${LLDBCMDPATH}"
       echo "env LD_PRELOAD=\"${LIBPATH}\""              >> "${LLDBCMDPATH}"
       echo "env DYLD_INSERT_LIBRARIES=\"${LIBPATH}\""   >> "${LLDBCMDPATH}"
-      echo "env DYLD_FORCE_FLAT_NAMESPACE=1"            >> "${LLDBCMDPATH}"
       echo "run ${@:2}"                                 >> "${LLDBCMDPATH}"
       lldb "${1}" -s "${LLDBCMDPATH}"
     fi
