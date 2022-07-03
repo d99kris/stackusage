@@ -452,8 +452,8 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
       /* Some OS do not allocate process stack until used, so use it */
       if(threadtype == SU_THREAD_MAIN)
       {
-        su_use_stack(fill_ptr, fill_ptr - threadinfo->stack_addr);
         grow_margin = SU_GROW_MARGIN;
+        su_use_stack(fill_ptr, fill_ptr - threadinfo->stack_addr - grow_margin);
       }
 
       /* Fill stack with pattern */
@@ -480,8 +480,8 @@ static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
       /* Some OS do not allocate process stack until used, so use it */
       if(threadtype == SU_THREAD_MAIN)
       {
-        su_use_stack(fill_ptr, fill_ptr - threadinfo->stack_addr);
         grow_margin = SU_GROW_MARGIN;
+        su_use_stack(fill_ptr, fill_ptr - threadinfo->stack_addr - grow_margin);
       }
 
       /* Fill stack with pattern */

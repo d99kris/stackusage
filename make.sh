@@ -17,7 +17,9 @@ exiterr()
 # process arguments
 DEPS="0"
 BUILD="0"
+DBGBUILD="0"
 TESTS="0"
+DBGTESTS="0"
 DOC="0"
 INSTALL="0"
 case "${1%/}" in
@@ -29,9 +31,18 @@ case "${1%/}" in
     BUILD="1"
     ;;
 
+  dbgbuild)
+    DBGBUILD="1"
+    ;;
+
   test*)
     BUILD="1"
     TESTS="1"
+    ;;
+
+  dbgtest*)
+    DBGBUILD="1"
+    DBGTESTS="1"
     ;;
 
   doc)
@@ -56,7 +67,9 @@ case "${1%/}" in
     echo "usage: make.sh <deps|build|tests|doc|install|all>"
     echo "  deps      - install project dependencies"
     echo "  build     - perform build"
+    echo "  dbgbuild  - perform debug build"
     echo "  tests     - perform build and run tests"
+    echo "  dbgtests  - perform debug build and run tests"
     echo "  doc       - perform build and generate documentation"
     echo "  install   - perform build and install"
     echo "  all       - perform all actions above"
@@ -93,9 +106,26 @@ if [[ "${BUILD}" == "1" ]]; then
   mkdir -p build && cd build && cmake .. && make ${MAKEARGS} && cd .. || exiterr "build failed, exiting."
 fi
 
+# dbgbuild
+if [[ "${DBGBUILD}" == "1" ]]; then
+  OS="$(uname)"
+  MAKEARGS=""
+  if [ "${OS}" == "Linux" ]; then
+    MAKEARGS="-j$(nproc)"
+  elif [ "${OS}" == "Darwin" ]; then
+    MAKEARGS="-j$(sysctl -n hw.ncpu)"
+  fi
+  mkdir -p dbgbuild && cd dbgbuild && cmake -DCMAKE_BUILD_TYPE=Debug .. && make ${MAKEARGS} && cd .. || exiterr "dbgbuild failed, exiting."
+fi
+
 # tests
 if [[ "${TESTS}" == "1" ]]; then
   cd build && ctest --output-on-failure && cd .. || exiterr "tests failed, exiting."
+fi
+
+# dbgtests
+if [[ "${DBGTESTS}" == "1" ]]; then
+  cd dbgbuild && ctest --output-on-failure && cd .. || exiterr "dbgtests failed, exiting."
 fi
 
 # doc

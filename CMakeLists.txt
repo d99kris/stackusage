@@ -12,6 +12,12 @@ install(TARGETS stackusage LIBRARY DESTINATION lib)
 set_target_properties(stackusage PROPERTIES LINK_FLAGS "-fPIC")
 target_link_libraries(stackusage pthread dl)
 
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  target_compile_options(stackusage PRIVATE -fsanitize=address -fno-omit-frame-pointer
+                                            -fsanitize-recover=address)
+  set_target_properties(stackusage PROPERTIES LINK_FLAGS "-fsanitize=address")
+endif()
+
 # Utility
 configure_file(src/stackusage ${CMAKE_CURRENT_BINARY_DIR}/stackusage COPYONLY)
 install(PROGRAMS src/stackusage DESTINATION bin)
