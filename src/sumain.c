@@ -57,6 +57,12 @@ __attribute__ ((section ("__DATA,__interpose"))) = { (const void *)(unsigned lon
                                                      (const void *)(unsigned long)&_orgfun }
 #endif
 
+#if defined(__clang__)
+#define OPTIMIZE_NONE __attribute__ ((optnone))
+#else
+#define OPTIMIZE_NONE __attribute__ ((optimize("O0")))
+#endif
+
 
 /* ----------- Types --------------------------------------------- */
 typedef struct
@@ -101,7 +107,7 @@ void signal_handler(int);
 
 /* ----------- Local Function Prototypes ------------------------- */
 static void *su_start_thread(void *arg);
-static void su_use_stack(char *base, long size);
+static void OPTIMIZE_NONE su_use_stack(char *base, long size);
 static void su_thread_init(su_threadtype_t threadtype, pthread_attr_t *rattr,
                            void *func_ptr);
 static void su_thread_fini(void *key);
@@ -281,7 +287,7 @@ static void *su_start_thread(void *startarg)
 }
 
 
-static void su_use_stack(char *base, long size)
+static void OPTIMIZE_NONE su_use_stack(char *base, long size)
 {
   char arr[SU_DUMMY_USE];
   char here;
@@ -289,10 +295,6 @@ static void su_use_stack(char *base, long size)
   if ((labs(&here - base) + SU_DUMMY_USE) < size)
   {
     su_use_stack(base, size);
-  }
-  else
-  {
-    return;
   }
 }
 
