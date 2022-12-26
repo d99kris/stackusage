@@ -43,7 +43,7 @@ showusage()
 
 showversion()
 {
-  echo "stackusage v1.18"
+  echo "stackusage v1.19"
   echo ""
   echo "Copyright (C) 2015-2022 Kristofer Berggren"
   echo ""
