@@ -1,5 +1,5 @@
 # Project
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14...3.22 FATAL_ERROR)
 project(stackusage VERSION 1.0 LANGUAGES C CXX)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -g \
                    -Wall -Wextra -Wshadow -Wpointer-arith -Wcast-qual \
